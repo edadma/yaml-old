@@ -19,7 +19,7 @@ object Interpolation {
   val INTERPOLATION_EXPRESSION = '\ue002'
 }
 
-class YamlLexical extends IndentationLexical(false, true, List("{", "[", "("), List("}", "]", ")"), ";;", "/*", "*/") {
+class YamlLexical extends IndentationLexical(false, true, List("{", "["), List("}", "]"), "#", "/*", "*/") {
 
   import Interpolation._
 
@@ -153,22 +153,21 @@ class YamlLexical extends IndentationLexical(false, true, List("{", "[", "("), L
 //  reserved += (
 //  )
 
-//  delimiters += (
-//  )
+  delimiters += (
+    ":", "-"
+  )
 }
 
 class YamlParser extends StandardTokenParsers with Parsers {
 
-  import Interpolation._
-
   override val lexical = new YamlLexical
 
-  def parse[T]( grammar: Parser[T], r: Reader[Char] ) = phrase(grammar)(lexical.read(r))
+  def parse[T]( r: Reader[Char] ) = phrase(yaml)(lexical.read(r))
 
-  def parseFromSource[T]( src: io.Source, grammar: Parser[T] ) = parseFromString(src.mkString, grammar)
+  def parseFromSource[T]( src: io.Source ) = parseFromString(src.mkString)
 
-  def parseFromString[T]( src: String, grammar: Parser[T] ) = {
-    parse(grammar, new CharSequenceReader(src)) match {
+  def parseFromString[T]( src: String ) = {
+    parse(new CharSequenceReader(src)) match {
       case Success(tree, _) => tree
       case NoSuccess(error, rest) => problem(rest.pos, error)
     }
@@ -207,22 +206,23 @@ class YamlParser extends StandardTokenParsers with Parsers {
         } )
 
   def yaml =
+    onl ~ container ~ onl
+
+  def container: Parser[Any] =
     map |
-    list |
-    primitive
+    list
 
   def map =
-    rep1sep(primitive ~ colon ~ value, nl)
+    rep1(primitive ~ ":" ~ value ~ nl)
 
   def list =
-    rep1sep(dash ~ value, nl)
+    rep1("-" ~ value ~ nl)
 
   def value =
-    primitive | Indent ~ yaml ~ Dedent
+    primitive | Indent ~> container <~ Dedent
 
   def primitive =
-    string |
-    number |
-    text
+    stringLit |
+    number
 
 }

@@ -19,7 +19,9 @@ object YamlLexical {
 
   val FLOAT_REGEX = """([-+]?(?:\d+)?\.\d+(?:[Ee][-+]?\d+)?|[-+]?\d+\.\d+[Ee][-+]?\d+)"""r
   val DEC_REGEX = """([-+]?(?:0|[123456789]\d*))"""r
-  val HEX_REGEX = """[-+]?0[xX]((?:\d|[abcdefABCDEF])+)"""r
+  val HEX_REGEX = """([-+]?0[xX](?:\d|[abcdefABCDEF])+)"""r
+
+  val DATE_REGEX = """(\d+-\d\d-\d\d)"""r
 }
 
 class YamlLexical extends IndentationLexical(false, true, List("{", "["), List("}", "]"), "#", "/*", "*/") {
@@ -173,7 +175,16 @@ class YamlParser extends StandardTokenParsers with PackratParsers {
     elem("dec literal", _.isInstanceOf[DecLit]) ^^ (_.chars.toInt.asInstanceOf[Number])
 
   lazy val hexLit: PackratParser[Number] =
-    elem("hex literal", _.isInstanceOf[HexLit]) ^^ (n => Integer.parseInt(n.chars, 16).asInstanceOf[Number])
+    elem("hex literal", _.isInstanceOf[HexLit]) ^^ { n =>
+      val (offset, sign) =
+        n.chars.charAt(0) match {
+          case '-' => (3, -1)
+          case '+' => (3, 1)
+          case _ => (2, 1)
+        }
+
+      (Integer.parseInt( n.chars.substring(offset), 16 )*sign).asInstanceOf[Number]
+    }
 
   lazy val pos: PackratParser[Position] = positioned( success(new Positional{}) ) ^^ { _.pos }
 

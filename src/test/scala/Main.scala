@@ -4,7 +4,7 @@ package xyz.hyperreal.yaml
 object Main extends App {
 
   val tree =
-    read( //io.Source.fromFile("test1.yml") )
+    read(
       """
         |asdf:
         |  - 123

@@ -48,8 +48,11 @@ class YamlLexical extends IndentationLexical(false, true, List("{", "["), List("
       {l => StringLit( escape(l mkString) )} |
     '"' ~> rep(guard(not('"')) ~> (('\\' ~ '"' ^^^ "\\\"") | elem("", ch => true))) <~ '"' ^^
       {l => StringLit( interpolate(l mkString, true) )} |
-    guard(not(('t' ~ 'r' ~ 'u' ~ 'e' | 'f' ~ 'a' ~ 'l' ~ 's' ~ 'e' | 'n' ~ 'u' ~ 'l' ~ 'l') ~ (':' ~ ' '|':' ~ '\n'|':' ~ '#'|'-' ~ ' '|'-' ~ '\n'|'-' ~ '#'|'\n'))) ~> rep1(guard(not(':' ~ ' '|':' ~ '\n'|':' ~ '#'|'-' ~ ' '|'-' ~ '\n'|'-' ~ '#'|'\n')) ~> elem("", ch => true)) ^^ {
-      l => StringLit( l mkString )}
+    text ^^ {
+      l => StringLit( l.mkString.trim )}
+
+  private def text: Parser[List[Elem]] =
+    guard(not(elem('{') | '[' | ('t' ~ 'r' ~ 'u' ~ 'e' | 'f' ~ 'a' ~ 'l' ~ 's' ~ 'e' | 'n' ~ 'u' ~ 'l' ~ 'l') ~ (',' ~ ' '|',' ~ '\n'|':' ~ ' '|':' ~ '\n'|':' ~ '#'|'-' ~ ' '|'-' ~ '\n'|'-' ~ '#'|'\n'))) ~> rep1(guard(not(elem(']')|'}'|',' ~ ' '|',' ~ '\n'|':' ~ ' '|':' ~ '\n'|':' ~ '#'|'-' ~ ' '|'-' ~ '\n'|'-' ~ '#'|'\n')) ~> elem("", ch => true))
 
   private def escape( s: String) = {
     val buf = new StringBuilder
@@ -208,8 +211,7 @@ class YamlParser extends StandardTokenParsers with PackratParsers {
     onl ~> container <~ onl
 
   lazy val container: PackratParser[ContainerAST] =
-    map |
-    list
+    map | list
 
   lazy val colon: PackratParser[_] =
     ": " | (":" ~ guard(Indent))
@@ -221,8 +223,12 @@ class YamlParser extends StandardTokenParsers with PackratParsers {
     rep1(pair <~ nl) ^^ MapAST
 
   lazy val pair: PackratParser[PairAST] =
-    primitive ~ colon ~ value ^^ {
+    primitive ~ colon ~ pairValue ^^ {
       case k ~ _ ~ v => PairAST( k, v ) }
+
+  lazy val pairValue: PackratParser[AST] =
+    value |
+    flowContainer
 
   lazy val list: PackratParser[ContainerAST] =
     rep1(dash ~> listValue <~ nl) ^^ ListAST
@@ -231,10 +237,28 @@ class YamlParser extends StandardTokenParsers with PackratParsers {
     pair ~ (Indent ~> map <~ Dedent) ^^ {
       case p ~ MapAST( ps ) => MapAST( p :: ps ) } |
     pair ^^ (p => MapAST( List(p) )) |
-    value
+    value |
+    flowContainer
 
   lazy val value: PackratParser[AST] =
     primitive | Indent ~> container <~ Dedent
+
+  lazy val flowContainer: PackratParser[ContainerAST] =
+    flowMap | flowList
+
+  lazy val flowMap: PackratParser[ContainerAST] =
+    "{" ~> repsep(flowPair, ",") <~ "}" ^^ MapAST
+
+  lazy val flowPair: PackratParser[PairAST] =
+    primitive ~ colon ~ primitive ^^ {
+      case k ~ _ ~ v => PairAST( k, v )
+    }
+
+  lazy val flowList: PackratParser[ContainerAST] =
+    "[" ~> repsep(flowValue, ",") <~ "]" ^^ ListAST
+
+  lazy val flowValue: PackratParser[AST] =
+    primitive | flowContainer
 
   lazy val primitive: PackratParser[AST] =
     "true" ^^^ BooleanAST( true ) |

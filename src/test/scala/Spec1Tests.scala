@@ -54,7 +54,29 @@ class Spec1Tests extends FreeSpec with PropertyChecks with Matchers {
         |  hr:  63
         |  avg: 0.288
       """.stripMargin
-    ) shouldBe List( Map( "name" -> "Mark McGwire", "hr" -> 65, "avg" -> 0.278 ), Map( "name" -> "Sammy Sosa", "hr" -> 63, "avg" -> 0.288 ) )
+    ) shouldBe List( Map("name" -> "Mark McGwire", "hr" -> 65, "avg" -> 0.278), Map("name" -> "Sammy Sosa", "hr" -> 63, "avg" -> 0.288) )
+  }
+
+  "Sequence of sequences" in {
+    read(
+      """
+        |- [name        , hr, avg  ]
+        |- [Mark McGwire, 65, 0.278]
+        |- [Sammy Sosa  , 63, 0.288]
+      """.stripMargin
+    ) shouldBe List( List("name", "hr", "avg"), List("Mark McGwire", 65, 0.278), List("Sammy Sosa", 63, 0.288) )
+  }
+
+  "Mapping of mappings" in {
+    read(
+      """
+        |Mark McGwire: {hr: 65, avg: 0.278}
+        |Sammy Sosa: {
+        |    hr: 63,
+        |    avg: 0.288
+        |  }
+      """.stripMargin
+    ) shouldBe Map( "Mark McGwire" -> Map("hr" -> 65, "avg" -> 0.278), "Sammy Sosa" -> Map("hr" -> 63, "avg" -> 0.288) )
   }
 
 }

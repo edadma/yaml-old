@@ -79,4 +79,17 @@ class Spec1Tests extends FreeSpec with PropertyChecks with Matchers {
     ) shouldBe Map( "Mark McGwire" -> Map("hr" -> 65, "avg" -> 0.278), "Sammy Sosa" -> Map("hr" -> 63, "avg" -> 0.288) )
   }
 
+  "Sequence key shortcut" in {
+    read(
+      """
+        |- item    : Super Hoop
+        |  quantity: 1
+        |- item    : Basketball
+        |  quantity: 4
+        |- item    : Big Shoes
+        |  quantity: 1
+      """.stripMargin
+    ) shouldBe List( Map("item" -> "Super Hoop", "quantity" -> 1), Map("item" -> "Basketball", "quantity" -> 4), Map("item" -> "Big Shoes", "quantity" -> 1) )
+  }
+
 }

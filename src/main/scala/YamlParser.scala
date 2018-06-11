@@ -1,12 +1,11 @@
+//@
 package xyz.hyperreal.yaml
 
 import scala.util.parsing.combinator.Parsers
-import scala.util.parsing.input.Position
+import util.parsing.input._
 import util.parsing.combinator.PackratParsers
 import util.parsing.combinator.syntactical.StandardTokenParsers
 import util.parsing.input.CharArrayReader.EofCh
-import util.parsing.input.{CharSequenceReader, Positional, Reader}
-
 import xyz.hyperreal.indentation_lexical._
 
 
@@ -23,14 +22,14 @@ class YamlLexical extends IndentationLexical(false, true, List("{", "["), List("
 
   import Interpolation._
 
-  override def token: Parser[Token] = /*regexToken |*/ stringToken | decimalToken | super.token
+  override def token: Parser[Token] = /*regexToken |*/ decimalToken | stringToken | super.token
 
   override def identChar = letter | elem('_') // | elem('$')
 
   override def whitespace: Parser[Any] = rep[Any](
     whitespaceChar
       | '/' ~ '*' ~ comment
-      | ';' ~ ';' ~ rep(chrExcept(EofCh, '\n'))
+      | '#' ~ rep(chrExcept(EofCh, '\n'))
       | '/' ~ '*' ~ failure("unclosed comment")
   )
 
@@ -41,14 +40,16 @@ class YamlLexical extends IndentationLexical(false, true, List("{", "["), List("
 //      {l => RegexLit( l mkString )}
 
   private def stringToken: Parser[Token] =
-    ('\'' ~ '\'' ~ '\'') ~> rep(guard(not('\'' ~ '\'' ~ '\'')) ~> elem("", ch => true)) <~ ('\'' ~ '\'' ~ '\'') ^^
-      {l => StringLit( l mkString )} |
-      ('"' ~ '"' ~ '"') ~> rep(guard(not('"' ~ '"' ~ '"')) ~> elem("", ch => true)) <~ ('"' ~ '"' ~ '"') ^^
-        {l => StringLit( interpolate(l mkString, false) )} |
-      '\'' ~> rep(guard(not('\'')) ~> (('\\' ~ '\'' ^^^ "\\'") | elem("", ch => true))) <~ '\'' ^^
-        {l => StringLit( escape(l mkString) )} |
-      '"' ~> rep(guard(not('"')) ~> (('\\' ~ '"' ^^^ "\\\"") | elem("", ch => true))) <~ '"' ^^
-        {l => StringLit( interpolate(l mkString, true) )}
+//    ('\'' ~ '\'' ~ '\'') ~> rep(guard(not('\'' ~ '\'' ~ '\'')) ~> elem("", ch => true)) <~ ('\'' ~ '\'' ~ '\'') ^^
+//      {l => StringLit( l mkString )} |
+//    ('"' ~ '"' ~ '"') ~> rep(guard(not('"' ~ '"' ~ '"')) ~> elem("", ch => true)) <~ ('"' ~ '"' ~ '"') ^^
+//      {l => StringLit( interpolate(l mkString, false) )} |
+    '\'' ~> rep(guard(not('\'')) ~> (('\\' ~ '\'' ^^^ "\\'") | elem("", ch => true))) <~ '\'' ^^
+      {l => StringLit( escape(l mkString) )} |
+    '"' ~> rep(guard(not('"')) ~> (('\\' ~ '"' ^^^ "\\\"") | elem("", ch => true))) <~ '"' ^^
+      {l => StringLit( interpolate(l mkString, true) )} |
+    guard(not(('t' ~ 'r' ~ 'u' ~ 'e' | 'f' ~ 'a' ~ 'l' ~ 's' ~ 'e' | 'n' ~ 'u' ~ 'l' ~ 'l') ~ (':' ~ ' '|':' ~ '\n'|':' ~ '#'|'-' ~ ' '|'-' ~ '\n'|'-' ~ '#'|'\n'))) ~> rep1(guard(not(':' ~ ' '|':' ~ '\n'|':' ~ '#'|'-' ~ ' '|'-' ~ '\n'|'-' ~ '#'|'\n')) ~> elem("", ch => true)) ^^ {
+      l => StringLit( l mkString )}
 
   private def escape( s: String) = {
     val buf = new StringBuilder
@@ -150,41 +151,39 @@ class YamlLexical extends IndentationLexical(false, true, List("{", "["), List("
     case Some(e) => e
   }
 
-//  reserved += (
-//  )
+  reserved += (
+    "true", "false", "null"
+  )
 
   delimiters += (
-    ":", "-"
+    "{", "[", ",", "]", "}",
+    ":", "-", ": ", "- "
   )
 }
 
-class YamlParser extends StandardTokenParsers with Parsers {
+class YamlParser extends StandardTokenParsers with PackratParsers {
 
   override val lexical = new YamlLexical
 
-  def parse[T]( r: Reader[Char] ) = phrase(yaml)(lexical.read(r))
-
-  def parseFromSource[T]( src: io.Source ) = parseFromString(src.mkString)
-
-  def parseFromString[T]( src: String ) = {
-    parse(new CharSequenceReader(src)) match {
+  def parse( r: Reader[Char] ): AST =
+    phrase(yaml)(lexical.read(r)) match {
       case Success(tree, _) => tree
-      case NoSuccess(error, rest) => problem(rest.pos, error)
+      case NoSuccess(error, rest) => problem( rest.pos, error )
     }
-  }
 
-  import lexical.{Newline, Indent, Dedent/*, RegexLit*/}
+  def parse( src: String ): AST = parse( new CharSequenceReader(src) )
 
-//  def regexLit: Parser[String] =
-//    elem("regex literal", _.isInstanceOf[RegexLit]) ^^ (_.chars)
+  def parse( src: io.Source ): AST = parse( new PagedSeqReader(PagedSeq.fromSource(src)) )
 
-  def pos = positioned( success(new Positional{}) ) ^^ { _.pos }
+  import lexical.{Newline, Indent, Dedent}
 
-  def nl = rep1(Newline)
+  lazy val pos: PackratParser[Position] = positioned( success(new Positional{}) ) ^^ { _.pos }
 
-  def onl = rep(Newline)
+  lazy val nl: PackratParser[_] = rep1(Newline)
 
-  def number: Parser[Number] =
+  lazy val onl: PackratParser[_] = rep(Newline)
+
+  lazy val number: PackratParser[Number] =
     numericLit ^^
       (n =>
         if (n startsWith "0x") {
@@ -205,24 +204,43 @@ class YamlParser extends StandardTokenParsers with Parsers {
             bi
         } )
 
-  def yaml =
-    onl ~ container ~ onl
+  lazy val yaml: PackratParser[ContainerAST] =
+    onl ~> container <~ onl
 
-  def container: Parser[Any] =
+  lazy val container: PackratParser[ContainerAST] =
     map |
     list
 
-  def map =
-    rep1(primitive ~ ":" ~ value ~ nl)
+  lazy val colon: PackratParser[_] =
+    ": " | (":" ~ guard(Indent))
 
-  def list =
-    rep1("-" ~ value ~ nl)
+  lazy val dash: PackratParser[_] =
+    "- " | ("-" ~ guard(Indent))
 
-  def value =
+  lazy val map: PackratParser[ContainerAST] =
+    rep1(pair <~ nl) ^^ MapAST
+
+  lazy val pair: PackratParser[PairAST] =
+    primitive ~ colon ~ value ^^ {
+      case k ~ _ ~ v => PairAST( k, v ) }
+
+  lazy val list: PackratParser[ContainerAST] =
+    rep1(dash ~> listValue <~ nl) ^^ ListAST
+
+  val listValue: PackratParser[AST] =
+    pair ~ (Indent ~> map <~ Dedent) ^^ {
+      case p ~ MapAST( ps ) => MapAST( p :: ps ) } |
+    pair ^^ (p => MapAST( List(p) )) |
+    value
+
+  lazy val value: PackratParser[AST] =
     primitive | Indent ~> container <~ Dedent
 
-  def primitive =
-    stringLit |
-    number
+  lazy val primitive: PackratParser[AST] =
+    "true" ^^^ BooleanAST( true ) |
+    "false" ^^^ BooleanAST( true ) |
+    "null" ^^^ NullAST |
+    stringLit ^^ StringAST |
+    number ^^ NumberAST
 
 }

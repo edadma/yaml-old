@@ -9,20 +9,24 @@ import util.parsing.input.CharArrayReader.EofCh
 import xyz.hyperreal.indentation_lexical._
 
 
-object Interpolation {
-  val INTERPOLATION_PATTERN = """\$(?:([a-zA-Z_]+\d*)|\{([^}]+)\}|\$)"""r
-  val INTERPOLATED_PATTERN = """[\ue000-\ue002]([^\ue000-\ue002]+)"""r
+object YamlLexical {
+  val INTERPOLATION_REGEX = """\$(?:([a-zA-Z_]+\d*)|\{([^}]+)\}|\$)"""r
+  val INTERPOLATED_REGEX = """[\ue000-\ue002]([^\ue000-\ue002]+)"""r
   val INTERPOLATION_DELIMITER = '\ue000'
   val INTERPOLATION_LITERAL = '\ue000'
   val INTERPOLATION_VARIABLE = '\ue001'
   val INTERPOLATION_EXPRESSION = '\ue002'
+
+  val FLOAT_REGEX = """([-+]?(?:\d+)?\.\d+(?:[Ee][-+]?\d+)?|[-+]?\d+\.\d+[Ee][-+]?\d+)"""r
+  val DEC_REGEX = """([-+]?(?:0|[123456789]\d*))"""r
+  val HEX_REGEX = """[-+]?0[xX]((?:\d|[abcdefABCDEF])+)"""r
 }
 
 class YamlLexical extends IndentationLexical(false, true, List("{", "["), List("}", "]"), "#", "/*", "*/") {
 
-  import Interpolation._
+  import YamlLexical._
 
-  override def token: Parser[Token] = /*regexToken |*/ decimalToken | stringToken | super.token
+  override def token: Parser[Token] = scalarToken | super.token
 
   override def identChar = letter | elem('_') // | elem('$')
 
@@ -33,13 +37,11 @@ class YamlLexical extends IndentationLexical(false, true, List("{", "["), List("
       | '/' ~ '*' ~ failure("unclosed comment")
   )
 
-//  case class RegexLit( chars: String ) extends Token
+  case class DecLit( chars: String ) extends Token
+  case class HexLit( chars: String ) extends Token
+  case class DateLit( chars: String ) extends Token
 
-//  private def regexToken: Parser[Token] =
-//    '`' ~> rep(guard(not('`')) ~> (('\\' ~ '`' ^^^ "\\`") | elem("", ch => true))) <~ '`' ^^
-//      {l => RegexLit( l mkString )}
-
-  private def stringToken: Parser[Token] =
+  private def scalarToken: Parser[Token] =
 //    ('\'' ~ '\'' ~ '\'') ~> rep(guard(not('\'' ~ '\'' ~ '\'')) ~> elem("", ch => true)) <~ ('\'' ~ '\'' ~ '\'') ^^
 //      {l => StringLit( l mkString )} |
 //    ('"' ~ '"' ~ '"') ~> rep(guard(not('"' ~ '"' ~ '"')) ~> elem("", ch => true)) <~ ('"' ~ '"' ~ '"') ^^
@@ -48,11 +50,17 @@ class YamlLexical extends IndentationLexical(false, true, List("{", "["), List("
       {l => StringLit( escape(l mkString) )} |
     '"' ~> rep(guard(not('"')) ~> (('\\' ~ '"' ^^^ "\\\"") | elem("", ch => true))) <~ '"' ^^
       {l => StringLit( interpolate(l mkString, true) )} |
-    text ^^ {
-      l => StringLit( l.mkString.trim )}
+    text ^^ { l =>
+      l.mkString.trim match {
+        case FLOAT_REGEX( n ) => NumericLit( n )
+        case DEC_REGEX( n ) => DecLit( n )
+        case HEX_REGEX( n ) => HexLit( n )
+        case s => StringLit( s )
+      }
+    }
 
   private def text: Parser[List[Elem]] =
-    guard(not(elem('{') | '[' | ('t' ~ 'r' ~ 'u' ~ 'e' | 'f' ~ 'a' ~ 'l' ~ 's' ~ 'e' | 'n' ~ 'u' ~ 'l' ~ 'l') ~ (',' ~ ' '|',' ~ '\n'|':' ~ ' '|':' ~ '\n'|':' ~ '#'|'-' ~ ' '|'-' ~ '\n'|'-' ~ '#'|'\n'))) ~> rep1(guard(not(elem(']')|'}'|',' ~ ' '|',' ~ '\n'|':' ~ ' '|':' ~ '\n'|':' ~ '#'|'-' ~ ' '|'-' ~ '\n'|'-' ~ '#'|'\n')) ~> elem("", ch => true))
+    guard(not(elem('{') | '[')) ~> rep1(guard(not(elem(']')|'}'|',' ~ ' '|',' ~ '\n'|':' ~ ' '|':' ~ '\n'|':' ~ '#'|'-' ~ ' '|'-' ~ '\n'|'-' ~ '#'|'\n')) ~> elem("", ch => true))
 
   private def escape( s: String) = {
     val buf = new StringBuilder
@@ -112,7 +120,7 @@ class YamlLexical extends IndentationLexical(false, true, List("{", "["), List("
 
     def literal( s: String ) = append( INTERPOLATION_LITERAL, if (handleEscape) escape(s) else s )
 
-    for (m <- INTERPOLATION_PATTERN.findAllMatchIn( s )) {
+    for (m <- INTERPOLATION_REGEX.findAllMatchIn( s )) {
       if (m.start > last)
         literal( s.substring(last, m.start) )
 
@@ -133,25 +141,6 @@ class YamlLexical extends IndentationLexical(false, true, List("{", "["), List("
       buf.deleteCharAt( 0 )
 
     buf.toString
-  }
-
-  private def decimalToken: Parser[Token] =
-    digits ~ '.' ~ digits ~ optExponent ^^ { case intPart ~ _ ~ fracPart ~ exp => NumericLit(intPart + '.' + fracPart + exp) } |
-      '.' ~ digits ~ optExponent ^^ { case _ ~ fracPart ~ exp => NumericLit('.' + fracPart + exp) } |
-      digits ~ optExponent ^^ { case intPart ~ exp => NumericLit(intPart + exp) }
-
-  private def digits = rep1(digit) ^^ (_ mkString)
-
-  private def chr( c: Char ) = elem("", ch => ch == c)
-
-  private def exponent = (chr('e') | 'E') ~ opt(chr('+') | '-') ~ digits ^^ {
-    case e ~ None ~ exp => List(e, exp) mkString
-    case e ~ Some(s) ~ exp => List(e, s, exp) mkString
-  }
-
-  private def optExponent = opt(exponent) ^^ {
-    case None => ""
-    case Some(e) => e
   }
 
   reserved += (
@@ -178,7 +167,13 @@ class YamlParser extends StandardTokenParsers with PackratParsers {
 
   def parse( src: io.Source ): AST = parse( new PagedSeqReader(PagedSeq.fromSource(src)) )
 
-  import lexical.{Newline, Indent, Dedent}
+  import lexical.{Newline, Indent, Dedent, DecLit, HexLit}
+
+  lazy val decLit: PackratParser[Number] =
+    elem("dec literal", _.isInstanceOf[DecLit]) ^^ (_.chars.toInt.asInstanceOf[Number])
+
+  lazy val hexLit: PackratParser[Number] =
+    elem("hex literal", _.isInstanceOf[HexLit]) ^^ (n => Integer.parseInt(n.chars, 16).asInstanceOf[Number])
 
   lazy val pos: PackratParser[Position] = positioned( success(new Positional{}) ) ^^ { _.pos }
 
@@ -186,26 +181,26 @@ class YamlParser extends StandardTokenParsers with PackratParsers {
 
   lazy val onl: PackratParser[_] = rep(Newline)
 
-  lazy val number: PackratParser[Number] =
-    numericLit ^^
-      (n =>
-        if (n startsWith "0x") {
-          val num = BigInt( n substring 2, 16 )
-
-          if (num.isValidInt)
-            num.intValue.asInstanceOf[Number]
-          else
-            num
-        } else if (n matches ".*[.eE].*")
-          n.toDouble.asInstanceOf[Number]
-        else {
-          val bi = BigInt( n )
-
-          if (bi.isValidInt)
-            bi.intValue.asInstanceOf[Number]
-          else
-            bi
-        } )
+//  lazy val number: PackratParser[Number] =
+//    numericLit ^^
+//      (n =>
+//        if (n startsWith "0x") {
+//          val num = BigInt( n substring 2, 16 )
+//
+//          if (num.isValidInt)
+//            num.intValue.asInstanceOf[Number]
+//          else
+//            num
+//        } else if (n matches ".*[.eE].*")
+//          n.toDouble.asInstanceOf[Number]
+//        else {
+//          val bi = BigInt( n )
+//
+//          if (bi.isValidInt)
+//            bi.intValue.asInstanceOf[Number]
+//          else
+//            bi
+//        } )
 
   lazy val yaml: PackratParser[AST] =
     onl ~> document <~ onl
@@ -267,6 +262,8 @@ class YamlParser extends StandardTokenParsers with PackratParsers {
     "false" ^^^ BooleanAST( true ) |
     "null" ^^^ NullAST |
     stringLit ^^ StringAST |
-    number ^^ NumberAST
+    decLit ^^ NumberAST |
+    hexLit ^^ NumberAST |
+    numericLit ^^ (n => NumberAST( n.toDouble ))
 
 }

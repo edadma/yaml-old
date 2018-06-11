@@ -4,10 +4,10 @@ package xyz.hyperreal.yaml
 object Main extends App {
 
   val tree =
-    read(
+    new YamlParser().parse(
       """
         |asdf:
-        |  - 123
+        |  - 123asdf
         |  - tryu
         |  - oiuh: true
         |    iut: gfd

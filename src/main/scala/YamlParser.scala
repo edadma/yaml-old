@@ -207,8 +207,11 @@ class YamlParser extends StandardTokenParsers with PackratParsers {
             bi
         } )
 
-  lazy val yaml: PackratParser[ContainerAST] =
-    onl ~> container <~ onl
+  lazy val yaml: PackratParser[AST] =
+    onl ~> document <~ onl
+
+  lazy val document: PackratParser[AST] =
+    container | flowValue
 
   lazy val container: PackratParser[ContainerAST] =
     map | list
@@ -223,10 +226,10 @@ class YamlParser extends StandardTokenParsers with PackratParsers {
     rep1(pair <~ nl) ^^ MapAST
 
   lazy val pair: PackratParser[PairAST] =
-    primitive ~ colon ~ pairValue ^^ {
+    primitive ~ colon ~ anyValue ^^ {
       case k ~ _ ~ v => PairAST( k, v ) }
 
-  lazy val pairValue: PackratParser[AST] =
+  lazy val anyValue: PackratParser[AST] =
     value |
     flowContainer
 
@@ -237,8 +240,7 @@ class YamlParser extends StandardTokenParsers with PackratParsers {
     pair ~ (Indent ~> map <~ Dedent) ^^ {
       case p ~ MapAST( ps ) => MapAST( p :: ps ) } |
     pair ^^ (p => MapAST( List(p) )) |
-    value |
-    flowContainer
+    anyValue
 
   lazy val value: PackratParser[AST] =
     primitive | Indent ~> container <~ Dedent
@@ -250,7 +252,7 @@ class YamlParser extends StandardTokenParsers with PackratParsers {
     "{" ~> repsep(flowPair, ",") <~ "}" ^^ MapAST
 
   lazy val flowPair: PackratParser[PairAST] =
-    primitive ~ colon ~ primitive ^^ {
+    flowValue ~ colon ~ flowValue ^^ {
       case k ~ _ ~ v => PairAST( k, v )
     }
 

@@ -1,6 +1,6 @@
 package xyz.hyperreal.yaml
 
-import java.time.LocalDate
+import java.time.{LocalDate, ZonedDateTime}
 
 
 trait AST
@@ -14,6 +14,7 @@ case class StringAST( v: String ) extends PrimitiveAST
 case class NumberAST( v: Number ) extends PrimitiveAST
 case object NullAST extends PrimitiveAST { val v = null }
 case class DateAST( v: LocalDate ) extends PrimitiveAST
+case class TimestampAST( v: ZonedDateTime ) extends PrimitiveAST
 
 trait ContainerAST extends AST
 case class MapAST( pairs: List[PairAST] ) extends ContainerAST

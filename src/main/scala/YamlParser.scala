@@ -1,7 +1,7 @@
 //@
 package xyz.hyperreal.yaml
 
-import java.time.LocalDate
+import java.time.{LocalDate, ZonedDateTime}
 
 import scala.util.parsing.combinator.Parsers
 import util.parsing.input._
@@ -23,7 +23,7 @@ object YamlLexical {
   val DEC_REGEX = """([-+]?(?:0|[123456789]\d*))"""r
   val HEX_REGEX = """([-+]?0[xX](?:\d|[abcdefABCDEF])+)"""r
   val DATE_REGEX = """(\d+-\d\d-\d\d)"""r
-  val TIMESTAMP_REGEX = """(\d+-\d\d-\d\d[Tt]\d\d:\d\d:\d\d(?:\.\d+)?(?:Z|[+-]\d\d:\d\d)"""r
+  val TIMESTAMP_REGEX = """(\d+-\d\d-\d\d[Tt]\d\d:\d\d:\d\d(?:\.\d+)?(?:Z|[+-]\d\d:\d\d))"""r
 }
 
 class YamlLexical extends IndentationLexical(false, true, List("{", "["), List("}", "]"), "#", "/*", "*/") {
@@ -174,7 +174,7 @@ class YamlParser extends StandardTokenParsers with PackratParsers {
 
   def parse( src: io.Source ): AST = parse( new PagedSeqReader(PagedSeq.fromSource(src)) )
 
-  import lexical.{Newline, Indent, Dedent, DecLit, HexLit, DateLit}
+  import lexical.{Newline, Indent, Dedent, DecLit, HexLit, DateLit, TimestampLit}
 
   lazy val decLit: PackratParser[Number] =
     elem("dec literal", _.isInstanceOf[DecLit]) ^^ (_.chars.toInt.asInstanceOf[Number])
@@ -194,8 +194,8 @@ class YamlParser extends StandardTokenParsers with PackratParsers {
   lazy val dateLit: PackratParser[LocalDate] =
     elem("date literal", _.isInstanceOf[DateLit]) ^^ (d => LocalDate.parse(d.chars))
 
-  lazy val timestampLit: PackratParser[LocalDate] =
-    elem("timestamp literal", _.isInstanceOf[DateLit]) ^^ (d => LocalDate.parse(d.chars))
+  lazy val timestampLit: PackratParser[ZonedDateTime] =
+    elem("timestamp literal", _.isInstanceOf[TimestampLit]) ^^ (d => ZonedDateTime.parse(d.chars))
 
   lazy val pos: PackratParser[Position] = positioned( success(new Positional{}) ) ^^ { _.pos }
 
@@ -286,6 +286,7 @@ class YamlParser extends StandardTokenParsers with PackratParsers {
     decLit ^^ NumberAST |
     hexLit ^^ NumberAST |
     numericLit ^^ (n => NumberAST( n.toDouble )) |
-    dateLit ^^ DateAST
+    dateLit ^^ DateAST |
+    timestampLit ^^ TimestampAST
 
 }

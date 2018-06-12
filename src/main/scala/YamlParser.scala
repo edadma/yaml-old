@@ -22,8 +22,8 @@ object YamlLexical {
   val FLOAT_REGEX = """([-+]?(?:\d+)?\.\d+(?:[Ee][-+]?\d+)?|[-+]?\d+\.\d+[Ee][-+]?\d+)"""r
   val DEC_REGEX = """([-+]?(?:0|[123456789]\d*))"""r
   val HEX_REGEX = """([-+]?0[xX](?:\d|[abcdefABCDEF])+)"""r
-
   val DATE_REGEX = """(\d+-\d\d-\d\d)"""r
+  val TIMESTAMP_REGEX = """(\d+-\d\d-\d\d[Tt]\d\d:\d\d:\d\d(?:\.\d+)?(?:Z|[+-]\d\d:\d\d)"""r
 }
 
 class YamlLexical extends IndentationLexical(false, true, List("{", "["), List("}", "]"), "#", "/*", "*/") {
@@ -44,6 +44,7 @@ class YamlLexical extends IndentationLexical(false, true, List("{", "["), List("
   case class DecLit( chars: String ) extends Token
   case class HexLit( chars: String ) extends Token
   case class DateLit( chars: String ) extends Token
+  case class TimestampLit( chars: String ) extends Token
 
   private def scalarToken: Parser[Token] =
 //    ('\'' ~ '\'' ~ '\'') ~> rep(guard(not('\'' ~ '\'' ~ '\'')) ~> elem("", ch => true)) <~ ('\'' ~ '\'' ~ '\'') ^^
@@ -60,6 +61,7 @@ class YamlLexical extends IndentationLexical(false, true, List("{", "["), List("
         case DEC_REGEX( n ) => DecLit( n )
         case HEX_REGEX( n ) => HexLit( n )
         case DATE_REGEX( d ) => DateLit( d )
+        case TIMESTAMP_REGEX( d ) => TimestampLit( d )
         case s => StringLit( s )
       }
     }
@@ -190,7 +192,10 @@ class YamlParser extends StandardTokenParsers with PackratParsers {
     }
 
   lazy val dateLit: PackratParser[LocalDate] =
-    elem("dec literal", _.isInstanceOf[DateLit]) ^^ (d => LocalDate.parse(d.chars))
+    elem("date literal", _.isInstanceOf[DateLit]) ^^ (d => LocalDate.parse(d.chars))
+
+  lazy val timestampLit: PackratParser[LocalDate] =
+    elem("timestamp literal", _.isInstanceOf[DateLit]) ^^ (d => LocalDate.parse(d.chars))
 
   lazy val pos: PackratParser[Position] = positioned( success(new Positional{}) ) ^^ { _.pos }
 

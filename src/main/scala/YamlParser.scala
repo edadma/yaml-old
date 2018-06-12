@@ -110,18 +110,42 @@ class YamlLexical extends IndentationLexical(false, true, List("{", "["), List("
 
             buf append Integer.valueOf( new String(Array(nextc, nextc, nextc, nextc)), 16 ).toChar
             chr( u )
+          } else if (r.rest.first == 'x') {
+            var u = r.rest.rest
+
+            def nextc =
+              if (u.atEnd)
+                sys.error( "unexpected end of string inside hex sequence" )
+              else {
+                val res = u.first
+
+                u = u.rest
+                res
+              }
+
+            buf append Integer.valueOf( new String(Array(nextc, nextc)), 16 ).toChar
+            chr( u )
           } else {
             buf.append(
-              Map (
-                '\\' -> '\\', '\'' -> '\'', '"' -> '"', '$' -> '$', '/' -> '/', 'b' -> '\b', 'f' -> '\f', 'n' -> '\n', 'r' -> '\r', 't' -> '\t'
-              ).get(r.rest.first) match {
-                case Some( c ) => c
+              r.rest.first match {
+                case '\\' => '\\'
+                case '\'' => '\''
+                case '"' => '"'
+                case '$' => '$'
+                case '/' => '/'
+                case 'b' => '\b'
+                case 'f' => '\f'
+                case 'n' => '\n'
+                case 'r' => '\r'
+                case 't' => '\t'
                 case _ => sys.error( "illegal escape character " + r.rest.first )
               } )
 
             chr( r.rest.rest )
           }
-        } else {
+        } else if (r.first == '\'' && !r.rest.atEnd && r.rest.first == '\'')
+          buf append '\''
+        else {
           buf append r.first
           chr( r.rest )
         }

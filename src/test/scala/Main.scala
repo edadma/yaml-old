@@ -6,8 +6,7 @@ object Main extends App {
   val tree =
     new YamlParser().parse(
       """
-        |- &n 123
-        |- *n
+        |- 'asdf\'zxcv'
       """.stripMargin
   )
 

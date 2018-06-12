@@ -160,4 +160,18 @@ class Spec1Tests extends FreeSpec with PropertyChecks with Matchers {
     ).head shouldBe List( Map("item" -> "Super Hoop", "quantity" -> 1), Map("item" -> "Basketball", "quantity" -> 4), Map("item" -> "Big Shoes", "quantity" -> 1) )
   }
 
+//  "Quoted Scalars" in {
+//    read(
+//      """
+//        |unicode: "Sosa did fine.\u263A"
+//        |control: "\b1998\t1999\t2000\n"
+//        |hex esc: "\x0d\x0a is \r\n"
+//        |
+//        |single: '"Howdy!" he cried.'
+//        |quoted: ' # Not a ''comment''.'
+//        |tie-fighter: '|\-*-/|'
+//      """.stripMargin
+//    )
+//  }
+
 }

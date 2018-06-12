@@ -19,9 +19,30 @@ class Evaluator {
             reset
             eval( d )
           }
-      case p: PrimitiveAST => p.v
-      case MapAST( pairs ) => pairs map {case PairAST(k, v) => (eval(k), eval(v))} toMap
-      case ListAST( elements ) => elements map eval
+      case AliasAST( pos, name ) =>
+        anchors get name match {
+          case None => problem( pos, s"anchor not found: $name" )
+          case Some( v ) => v
+        }
+      case p: PrimitiveAST =>
+        if (p.anchor isDefined)
+          anchors(p.anchor.get) = p.v
+
+        p.v
+      case MapAST( anchor, pairs ) =>
+        val map = pairs map {case PairAST(k, v) => (eval(k), eval(v))} toMap
+
+        if (anchor isDefined)
+          anchors(anchor get) = map
+
+        map
+      case ListAST( anchor, elements ) =>
+        val list = elements map eval
+
+        if (anchor isDefined)
+          anchors(anchor get) = list
+
+        list
     }
 
 }

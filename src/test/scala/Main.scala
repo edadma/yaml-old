@@ -6,10 +6,12 @@ object Main extends App {
   val tree =
     new YamlParser().parse(
       """
-        |--- 123
+        |- &n 123
+        |- *n
       """.stripMargin
   )
 
   println( tree )
+  println( new Evaluator().eval(tree) )
 
 }

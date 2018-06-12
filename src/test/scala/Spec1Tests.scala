@@ -130,6 +130,21 @@ class Spec1Tests extends FreeSpec with PropertyChecks with Matchers {
     ).head shouldBe Map( "hr" -> List("Mark McGwire", "Sammy Sosa"), "rbi" -> List("Sammy Sosa", "Ken Griffey") )
   }
 
+  """Node for “Sammy Sosa” appears twice in this document""" in {
+    read(
+      """
+        |---
+        |hr:
+        |  - Mark McGwire
+        |  # Following node labeled SS
+        |  - &SS Sammy Sosa
+        |rbi:
+        |  - *SS # Subsequent occurrence
+        |  - Ken Griffey
+      """.stripMargin
+    ).head shouldBe Map( "hr" -> List("Mark McGwire", "Sammy Sosa"), "rbi" -> List("Sammy Sosa", "Ken Griffey") )
+  }
+
   "Compact Nested Mapping" in {
     read(
       """

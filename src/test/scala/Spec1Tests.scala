@@ -1,5 +1,7 @@
 package xyz.hyperreal.yaml
 
+import java.time.LocalTime
+
 import org.scalatest._
 import prop.PropertyChecks
 
@@ -14,7 +16,7 @@ class Spec1Tests extends FreeSpec with PropertyChecks with Matchers {
         |- Sammy Sosa
         |- Ken Griffey
       """.stripMargin
-    ) shouldBe List( "Mark McGwire", "Sammy Sosa", "Ken Griffey" )
+    ).head shouldBe List( "Mark McGwire", "Sammy Sosa", "Ken Griffey" )
 	}
 
   "Mapping of scalars to scalars" in {
@@ -24,7 +26,7 @@ class Spec1Tests extends FreeSpec with PropertyChecks with Matchers {
         |avg: 0.278
         |rbi: 147
       """.stripMargin
-    ) shouldBe Map( "hr" -> 65, "avg" -> 0.278, "rbi" -> 147 )
+    ).head shouldBe Map( "hr" -> 65, "avg" -> 0.278, "rbi" -> 147 )
   }
 
   "Mapping of scalars to sequences" in {
@@ -39,7 +41,7 @@ class Spec1Tests extends FreeSpec with PropertyChecks with Matchers {
         |  - Chicago Cubs
         |  - Atlanta Braves
       """.stripMargin
-    ) shouldBe Map( "american" -> List( "Boston Red Sox", "Detroit Tigers", "New York Yankees" ), "national" -> List( "New York Mets", "Chicago Cubs", "Atlanta Braves" ) )
+    ).head shouldBe Map( "american" -> List( "Boston Red Sox", "Detroit Tigers", "New York Yankees" ), "national" -> List( "New York Mets", "Chicago Cubs", "Atlanta Braves" ) )
   }
 
   "Sequence of mappings" in {
@@ -54,7 +56,7 @@ class Spec1Tests extends FreeSpec with PropertyChecks with Matchers {
         |  hr:  63
         |  avg: 0.288
       """.stripMargin
-    ) shouldBe List( Map("name" -> "Mark McGwire", "hr" -> 65, "avg" -> 0.278), Map("name" -> "Sammy Sosa", "hr" -> 63, "avg" -> 0.288) )
+    ).head shouldBe List( Map("name" -> "Mark McGwire", "hr" -> 65, "avg" -> 0.278), Map("name" -> "Sammy Sosa", "hr" -> 63, "avg" -> 0.288) )
   }
 
   "Sequence of sequences" in {
@@ -64,7 +66,7 @@ class Spec1Tests extends FreeSpec with PropertyChecks with Matchers {
         |- [Mark McGwire, 65, 0.278]
         |- [Sammy Sosa  , 63, 0.288]
       """.stripMargin
-    ) shouldBe List( List("name", "hr", "avg"), List("Mark McGwire", 65, 0.278), List("Sammy Sosa", 63, 0.288) )
+    ).head shouldBe List( List("name", "hr", "avg"), List("Mark McGwire", 65, 0.278), List("Sammy Sosa", 63, 0.288) )
   }
 
   "Mapping of mappings" in {
@@ -76,12 +78,47 @@ class Spec1Tests extends FreeSpec with PropertyChecks with Matchers {
         |    avg: 0.288
         |  }
       """.stripMargin
-    ) shouldBe Map( "Mark McGwire" -> Map("hr" -> 65, "avg" -> 0.278), "Sammy Sosa" -> Map("hr" -> 63, "avg" -> 0.288) )
+    ).head shouldBe Map( "Mark McGwire" -> Map("hr" -> 65, "avg" -> 0.278), "Sammy Sosa" -> Map("hr" -> 63, "avg" -> 0.288) )
   }
 
-  "Single Document with Two Comments" in {//todo: not exactly like the example in the spec
+  "Two Documents in a Stream" in {
     read(
       """
+        |# Ranking of 1998 home runs
+        |---
+        |- Mark McGwire
+        |- Sammy Sosa
+        |- Ken Griffey
+        |
+        |# Team ranking
+        |---
+        |- Chicago Cubs
+        |- St Louis Cardinals
+      """.stripMargin
+    ) shouldBe List( List("Mark McGwire", "Sammy Sosa", "Ken Griffey"), List("Chicago Cubs", "St Louis Cardinals") )
+  }
+
+  "Play by Play Feed from a Game" in {
+    read(
+      """
+        |---
+        |time: 20:03:20
+        |player: Sammy Sosa
+        |action: strike (miss)
+        |...
+        |---
+        |time: 20:03:47
+        |player: Sammy Sosa
+        |action: grand slam
+        |...
+      """.stripMargin
+    ) shouldBe List( Map("time" -> LocalTime.parse("20:03:20"), "player" -> "Sammy Sosa", "action" -> "strike (miss)"), Map("time" -> LocalTime.parse("20:03:47"), "player" -> "Sammy Sosa", "action" -> "grand slam") )
+  }
+
+  "Single Document with Two Comments" in {
+    read(
+      """
+        |---
         |hr: # 1998 hr ranking
         |  - Mark McGwire
         |  - Sammy Sosa
@@ -90,12 +127,14 @@ class Spec1Tests extends FreeSpec with PropertyChecks with Matchers {
         |  - Sammy Sosa
         |  - Ken Griffey
       """.stripMargin
-    ) shouldBe Map( "hr" -> List("Mark McGwire", "Sammy Sosa"), "rbi" -> List("Sammy Sosa", "Ken Griffey") )
+    ).head shouldBe Map( "hr" -> List("Mark McGwire", "Sammy Sosa"), "rbi" -> List("Sammy Sosa", "Ken Griffey") )
   }
 
-  "Compact Nested Mapping" in {//todo: not exactly like the example in the spec
+  "Compact Nested Mapping" in {
     read(
       """
+        |---
+        |# Products purchased
         |- item    : Super Hoop
         |  quantity: 1
         |- item    : Basketball
@@ -103,7 +142,7 @@ class Spec1Tests extends FreeSpec with PropertyChecks with Matchers {
         |- item    : Big Shoes
         |  quantity: 1
       """.stripMargin
-    ) shouldBe List( Map("item" -> "Super Hoop", "quantity" -> 1), Map("item" -> "Basketball", "quantity" -> 4), Map("item" -> "Big Shoes", "quantity" -> 1) )
+    ).head shouldBe List( Map("item" -> "Super Hoop", "quantity" -> 1), Map("item" -> "Basketball", "quantity" -> 4), Map("item" -> "Big Shoes", "quantity" -> 1) )
   }
 
 }

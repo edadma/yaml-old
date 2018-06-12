@@ -1,9 +1,8 @@
 //@
 package xyz.hyperreal.yaml
 
-import java.time.{LocalDate, ZonedDateTime}
+import java.time.{LocalDate, LocalTime, ZonedDateTime}
 
-import scala.util.parsing.combinator.Parsers
 import util.parsing.input._
 import util.parsing.combinator.PackratParsers
 import util.parsing.combinator.syntactical.StandardTokenParsers
@@ -24,6 +23,7 @@ object YamlLexical {
   val HEX_REGEX = """([-+]?0[xX](?:\d|[abcdefABCDEF])+)"""r
   val DATE_REGEX = """(\d+-\d\d-\d\d)"""r
   val TIMESTAMP_REGEX = """(\d+-\d\d-\d\d[Tt]\d\d:\d\d:\d\d(?:\.\d+)?(?:Z|[+-]\d\d:\d\d))"""r
+  val TIME_REGEX = """([012]\d:[012345]\d:[012345]\d(?:\.\d+)?)"""r
 }
 
 class YamlLexical extends IndentationLexical(false, true, List("{", "["), List("}", "]"), "#", "/*", "*/") {
@@ -45,6 +45,7 @@ class YamlLexical extends IndentationLexical(false, true, List("{", "["), List("
   case class HexLit( chars: String ) extends Token
   case class DateLit( chars: String ) extends Token
   case class TimestampLit( chars: String ) extends Token
+  case class TimeLit( chars: String ) extends Token
 
   private def scalarToken: Parser[Token] =
 //    ('\'' ~ '\'' ~ '\'') ~> rep(guard(not('\'' ~ '\'' ~ '\'')) ~> elem("", ch => true)) <~ ('\'' ~ '\'' ~ '\'') ^^
@@ -62,12 +63,13 @@ class YamlLexical extends IndentationLexical(false, true, List("{", "["), List("
         case HEX_REGEX( n ) => HexLit( n )
         case DATE_REGEX( d ) => DateLit( d )
         case TIMESTAMP_REGEX( d ) => TimestampLit( d )
+        case TIME_REGEX( t ) => TimeLit( t )
         case s => StringLit( s )
       }
     }
 
   private def text: Parser[List[Elem]] =
-    guard(not(elem('{') | '[')) ~> rep1(guard(not(elem(']')|'}'|',' ~ ' '|',' ~ '\n'|':' ~ ' '|':' ~ '\n'|':' ~ '#'|'-' ~ ' '|'-' ~ '\n'|'-' ~ '#'|'\n')) ~> elem("", ch => true))
+    guard(not(elem('{') | '[' | '-' ~ '-' ~ '-' | '.' ~ '.' ~ '.')) ~> rep1(guard(not(elem(']') | '}' | ',' ~ ' ' | ',' ~ '\n' | ':' ~ ' ' | ':' ~ '\n' | ':' ~ '#' | '-' ~ ' ' | '-' ~ '\n' | '-' ~ '#' | '\n')) ~> elem("", ch => true))
 
   private def escape( s: String) = {
     val buf = new StringBuilder
@@ -156,7 +158,7 @@ class YamlLexical extends IndentationLexical(false, true, List("{", "["), List("
 
   delimiters += (
     "{", "[", ",", "]", "}",
-    ":", "-", ": ", "- "
+    ":", "-", ": ", "- ", "--- ", "---", "..."
   )
 }
 
@@ -174,7 +176,7 @@ class YamlParser extends StandardTokenParsers with PackratParsers {
 
   def parse( src: io.Source ): AST = parse( new PagedSeqReader(PagedSeq.fromSource(src)) )
 
-  import lexical.{Newline, Indent, Dedent, DecLit, HexLit, DateLit, TimestampLit}
+  import lexical.{Newline, Indent, Dedent, DecLit, HexLit, DateLit, TimestampLit, TimeLit}
 
   lazy val decLit: PackratParser[Number] =
     elem("dec literal", _.isInstanceOf[DecLit]) ^^ (_.chars.toInt.asInstanceOf[Number])
@@ -197,37 +199,22 @@ class YamlParser extends StandardTokenParsers with PackratParsers {
   lazy val timestampLit: PackratParser[ZonedDateTime] =
     elem("timestamp literal", _.isInstanceOf[TimestampLit]) ^^ (d => ZonedDateTime.parse(d.chars))
 
+  lazy val timeLit: PackratParser[LocalTime] =
+    elem("time literal", _.isInstanceOf[TimeLit]) ^^ (t => LocalTime.parse(t.chars))
+
   lazy val pos: PackratParser[Position] = positioned( success(new Positional{}) ) ^^ { _.pos }
 
   lazy val nl: PackratParser[_] = rep1(Newline)
 
   lazy val onl: PackratParser[_] = rep(Newline)
 
-//  lazy val number: PackratParser[Number] =
-//    numericLit ^^
-//      (n =>
-//        if (n startsWith "0x") {
-//          val num = BigInt( n substring 2, 16 )
-//
-//          if (num.isValidInt)
-//            num.intValue.asInstanceOf[Number]
-//          else
-//            num
-//        } else if (n matches ".*[.eE].*")
-//          n.toDouble.asInstanceOf[Number]
-//        else {
-//          val bi = BigInt( n )
-//
-//          if (bi.isValidInt)
-//            bi.intValue.asInstanceOf[Number]
-//          else
-//            bi
-//        } )
+  lazy val dashes: PackratParser[_] =
+    "--- " | "---" ~ guard(Newline)
 
   lazy val yaml: PackratParser[AST] =
-    onl ~> document <~ onl
+    onl ~> rep1(opt(dashes) ~> onl ~> document <~ opt("...") <~ onl) ^^ SourceAST
 
-  lazy val document: PackratParser[AST] =
+  lazy val document: PackratParser[ValueAST] =
     container | flowValue
 
   lazy val container: PackratParser[ContainerAST] =
@@ -246,19 +233,19 @@ class YamlParser extends StandardTokenParsers with PackratParsers {
     primitive ~ colon ~ anyValue ^^ {
       case k ~ _ ~ v => PairAST( k, v ) }
 
-  lazy val anyValue: PackratParser[AST] =
+  lazy val anyValue: PackratParser[ValueAST] =
     value | flowContainer
 
   lazy val list: PackratParser[ContainerAST] =
     rep1(dash ~> listValue <~ nl) ^^ ListAST
 
-  val listValue: PackratParser[AST] =
+  val listValue: PackratParser[ValueAST] =
     pair ~ (Indent ~> map <~ Dedent) ^^ {
       case p ~ MapAST( ps ) => MapAST( p :: ps ) } |
     pair ^^ (p => MapAST( List(p) )) |
     anyValue
 
-  lazy val value: PackratParser[AST] =
+  lazy val value: PackratParser[ValueAST] =
     primitive | Indent ~> container <~ Dedent
 
   lazy val flowContainer: PackratParser[ContainerAST] =
@@ -275,10 +262,10 @@ class YamlParser extends StandardTokenParsers with PackratParsers {
   lazy val flowList: PackratParser[ContainerAST] =
     "[" ~> repsep(flowValue, ",") <~ "]" ^^ ListAST
 
-  lazy val flowValue: PackratParser[AST] =
+  lazy val flowValue: PackratParser[ValueAST] =
     primitive | flowContainer
 
-  lazy val primitive: PackratParser[AST] =
+  lazy val primitive: PackratParser[PrimitiveAST] =
     "true" ^^^ BooleanAST( true ) |
     "false" ^^^ BooleanAST( true ) |
     "null" ^^^ NullAST |
@@ -287,6 +274,7 @@ class YamlParser extends StandardTokenParsers with PackratParsers {
     hexLit ^^ NumberAST |
     numericLit ^^ (n => NumberAST( n.toDouble )) |
     dateLit ^^ DateAST |
-    timestampLit ^^ TimestampAST
+    timestampLit ^^ TimestampAST |
+    timeLit ^^ TimeAST
 
 }

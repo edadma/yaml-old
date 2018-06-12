@@ -1,6 +1,8 @@
 //@
 package xyz.hyperreal.yaml
 
+import java.time.LocalDate
+
 import scala.util.parsing.combinator.Parsers
 import util.parsing.input._
 import util.parsing.combinator.PackratParsers
@@ -57,6 +59,7 @@ class YamlLexical extends IndentationLexical(false, true, List("{", "["), List("
         case FLOAT_REGEX( n ) => NumericLit( n )
         case DEC_REGEX( n ) => DecLit( n )
         case HEX_REGEX( n ) => HexLit( n )
+        case DATE_REGEX( d ) => DateLit( d )
         case s => StringLit( s )
       }
     }
@@ -169,7 +172,7 @@ class YamlParser extends StandardTokenParsers with PackratParsers {
 
   def parse( src: io.Source ): AST = parse( new PagedSeqReader(PagedSeq.fromSource(src)) )
 
-  import lexical.{Newline, Indent, Dedent, DecLit, HexLit}
+  import lexical.{Newline, Indent, Dedent, DecLit, HexLit, DateLit}
 
   lazy val decLit: PackratParser[Number] =
     elem("dec literal", _.isInstanceOf[DecLit]) ^^ (_.chars.toInt.asInstanceOf[Number])
@@ -185,6 +188,9 @@ class YamlParser extends StandardTokenParsers with PackratParsers {
 
       (Integer.parseInt( n.chars.substring(offset), 16 )*sign).asInstanceOf[Number]
     }
+
+  lazy val dateLit: PackratParser[LocalDate] =
+    elem("dec literal", _.isInstanceOf[DateLit]) ^^ (d => LocalDate.parse(d.chars))
 
   lazy val pos: PackratParser[Position] = positioned( success(new Positional{}) ) ^^ { _.pos }
 
@@ -236,8 +242,7 @@ class YamlParser extends StandardTokenParsers with PackratParsers {
       case k ~ _ ~ v => PairAST( k, v ) }
 
   lazy val anyValue: PackratParser[AST] =
-    value |
-    flowContainer
+    value | flowContainer
 
   lazy val list: PackratParser[ContainerAST] =
     rep1(dash ~> listValue <~ nl) ^^ ListAST
@@ -275,6 +280,7 @@ class YamlParser extends StandardTokenParsers with PackratParsers {
     stringLit ^^ StringAST |
     decLit ^^ NumberAST |
     hexLit ^^ NumberAST |
-    numericLit ^^ (n => NumberAST( n.toDouble ))
+    numericLit ^^ (n => NumberAST( n.toDouble )) |
+    dateLit ^^ DateAST
 
 }

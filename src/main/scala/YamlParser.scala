@@ -18,7 +18,7 @@ object YamlLexical {
   val INTERPOLATION_VARIABLE = '\ue001'
   val INTERPOLATION_EXPRESSION = '\ue002'
 
-  val FLOAT_REGEX = """([-+]?(?:\d+)?\.\d+(?:[Ee][-+]?\d+)?|[-+]?\d+\.\d+[Ee][-+]?\d|+[-+]?\.inf|\.NaN)"""r
+  val FLOAT_REGEX = """([-+]?(?:\d+)?\.\d+(?:[Ee][-+]?\d+)?|[-+]?\d+\.\d+[Ee][-+]?\d+|[-+]?\.inf|\.NaN)"""r
   val DEC_REGEX = """([-+]?(?:0|[123456789]\d*))"""r
   val HEX_REGEX = """([-+]?0[xX](?:\d|[abcdefABCDEF])+)"""r
   val OCT_REGEX = """([-+]?0[oO][01234567]+)"""r
@@ -197,7 +197,7 @@ class YamlLexical extends IndentationLexical(false, true, List("{", "["), List("
   }
 
   reserved += (
-    "true", "false", "null"
+    "true", "false"
   )
 
   delimiters += (
@@ -294,25 +294,23 @@ class YamlParser extends StandardTokenParsers with PackratParsers {
     }
 
   lazy val pair: PackratParser[PairAST] =
-    primitive ~ colon ~ anyValue ^^ {
+    primitive ~ colon ~ value ^^ {
       case k ~ _ ~ v => PairAST( k, v ) }
 
-  lazy val anyValue: PackratParser[ValueAST] =
-    value | flowContainer
+  lazy val value: PackratParser[ValueAST] =
+    primitive | Indent ~> container <~ Dedent | flowContainer
 
+  def
   lazy val list: PackratParser[ContainerAST] =
-    opt(anchor) ~ rep1(dash ~> listValue <~ nl) ^^ {
-      case a ~ l => ListAST( a, l )
+    opt(anchor) ~ rep1(dash ~> opt(listValue) <~ nl) ^^ {
+      case a ~ l => ListAST( a, l map () )
     }
 
   val listValue: PackratParser[ValueAST] =
     pair ~ (Indent ~> map <~ Dedent) ^^ {
       case p ~ MapAST( _, ps ) => MapAST( None, p :: ps ) } |
     pair ^^ (p => MapAST( None, List(p) )) |
-    anyValue
-
-  lazy val value: PackratParser[ValueAST] =
-    primitive | Indent ~> container <~ Dedent
+    value
 
   lazy val flowContainer: PackratParser[ContainerAST] =
     flowMap | flowList
@@ -338,7 +336,6 @@ class YamlParser extends StandardTokenParsers with PackratParsers {
   lazy val primitive: PackratParser[PrimitiveAST] =
     opt(anchor) <~ "true" ^^ { a => BooleanAST( a, true ) } |
     opt(anchor) <~ "false" ^^ { a => BooleanAST( a, false ) } |
-    opt(anchor) <~ "null" ^^ NullAST |
     opt(anchor) ~ stringLit ^^ { case a ~ s => StringAST( a, s ) } |
     opt(anchor) ~ decLit ^^ { case a ~ n => NumberAST( a, n ) } |
     opt(anchor) ~ hexLit ^^ { case a ~ n => NumberAST( a, n ) } |

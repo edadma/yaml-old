@@ -201,7 +201,9 @@ class Spec1Tests extends FreeSpec with PropertyChecks with Matchers {
         |negative infinity: -.inf
         |not a number: .NaN
       """.stripMargin
-    ).head shouldBe Map( "canonical" -> 1.23015e+3, "exponential" -> 12.3015e+02, "fixed" -> 1230.15, "negative infinity" -> Double.NegativeInfinity, "not a number" -> Double.NaN )
+    ).head.asInstanceOf[Map[_, _]] map {
+      case (k, v) => (k, if (v.asInstanceOf[Double].toString == "NaN") "NaN" else v)
+    } shouldBe Map( "canonical" -> 1.23015e+3, "exponential" -> 12.3015e+02, "fixed" -> 1230.15, "negative infinity" -> Double.NegativeInfinity, "not a number" -> "NaN" )
   }
 
 }

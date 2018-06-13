@@ -1,6 +1,7 @@
 //@
 package xyz.hyperreal.yaml
 
+import java.time.format.DateTimeFormatter
 import java.time.{LocalDate, LocalTime, ZonedDateTime}
 
 import util.parsing.input._
@@ -184,8 +185,11 @@ object YamlParser {
   val HEX_REGEX = """([-+]?0[xX](?:\d|[abcdefABCDEF])+)"""r
   val OCT_REGEX = """([-+]?0[oO][01234567]+)"""r
   val DATE_REGEX = """(\d+-\d\d-\d\d)"""r
-  val TIMESTAMP_REGEX = """(\d+-\d\d-\d\d[Tt]\d\d:\d\d:\d\d(?:\.\d+)?(?:Z|[+-]\d\d:\d\d))"""r
+  val TIMESTAMP_REGEX = """(\d+-\d\d-\d\d[Tt]\d\d:\d\d:\d\d(?:\.\d*)?(?:Z|[+-]\d\d:\d\d))"""r
   val TIME_REGEX = """([012]\d:[012345]\d:[012345]\d(?:\.\d+)?)"""r
+  val SPACED_TIMESTAMP_REGEX = """(\d+-\d\d-\d\d\s+\d\d:\d\d:\d\d(?:\.\d*)?\s+(?:Z|[+-]\d\d:\d\d|[+-]\d+))"""r
+
+  val SPACED_FORMATTER = DateTimeFormatter.ofPattern( "yyyy-MM-dd HH:mm:ss[.SS] x" )
 }
 
 class YamlParser extends StandardTokenParsers with PackratParsers {
@@ -321,6 +325,7 @@ class YamlParser extends StandardTokenParsers with PackratParsers {
       case a ~ DATE_REGEX( d ) => DateAST( a, LocalDate.parse(d) )
       case a ~ TIME_REGEX( t ) => TimeAST( a, LocalTime.parse(t) )
       case a ~ TIMESTAMP_REGEX( t ) => TimestampAST( a, ZonedDateTime.parse(t) )
+      case a ~ SPACED_TIMESTAMP_REGEX( t ) => TimestampAST( a, ZonedDateTime.parse(t, SPACED_FORMATTER) )//todo: spaced datetimes will have to be built manually (currently, time zone has to be zero padded)
       case a ~ s => StringAST( a, s ) } |
     pos ~ alias ^^ {
       case p ~ a => AliasAST( p, a ) }

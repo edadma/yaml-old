@@ -1,17 +1,21 @@
+//@
 package xyz.hyperreal.yaml
 
 
 object Main extends App {
 
-  val tree =
-    new YamlParser().parse(
-      """
-        |---
-        |-
-      """.stripMargin
-  )
+  try {
+    val tree =
+      new YamlParser().parse(
+        """
+          |2001-11-23 15:02:31 -05
+        """.stripMargin
+      )
 
-  println( tree )
-  println( new Evaluator().eval(tree) )
+    println( tree )
+    println( new Evaluator().eval(tree) )
+  } catch {
+    case e: Exception => println( e.getMessage )
+  }
 
 }

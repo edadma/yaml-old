@@ -283,10 +283,10 @@ class YamlParser extends StandardTokenParsers with PackratParsers {
     map | list
 
   lazy val colon: PackratParser[_] =
-    ": " | (":" ~ guard(Indent))
+    ": " | (":" ~ guard(Indent | Newline))
 
   lazy val dash: PackratParser[_] =
-    "- " | ("-" ~ guard(Indent))
+    "- " | ("-" ~ guard(Indent | Newline))
 
   lazy val map: PackratParser[ContainerAST] =
     opt(anchor) ~ rep1(pair <~ nl) ^^ {
@@ -294,16 +294,21 @@ class YamlParser extends StandardTokenParsers with PackratParsers {
     }
 
   lazy val pair: PackratParser[PairAST] =
-    primitive ~ colon ~ value ^^ {
-      case k ~ _ ~ v => PairAST( k, v ) }
+    opt(primitive) ~ colon ~ opt(value) ^^ {
+      case k ~ _ ~ v => PairAST( ornull(k), ornull(v) ) }
 
   lazy val value: PackratParser[ValueAST] =
     primitive | Indent ~> container <~ Dedent | flowContainer
 
-  def
+  def ornull( a: Option[ValueAST] ) =
+    a match {
+      case None => NullAST( None )
+      case Some( v ) => v
+    }
+
   lazy val list: PackratParser[ContainerAST] =
     opt(anchor) ~ rep1(dash ~> opt(listValue) <~ nl) ^^ {
-      case a ~ l => ListAST( a, l map () )
+      case a ~ l => ListAST( a, l map ornull )
     }
 
   val listValue: PackratParser[ValueAST] =
@@ -321,13 +326,13 @@ class YamlParser extends StandardTokenParsers with PackratParsers {
     }
 
   lazy val flowPair: PackratParser[PairAST] =
-    flowValue ~ colon ~ flowValue ^^ {
-      case k ~ _ ~ v => PairAST( k, v )
+    opt(flowValue) ~ colon ~ opt(flowValue) ^^ {
+      case k ~ _ ~ v => PairAST( ornull(k), ornull(v) )
     }
 
   lazy val flowList: PackratParser[ContainerAST] =
-    opt(anchor) ~ ("[" ~> repsep(flowValue, ",") <~ "]") ^^ {
-      case a ~ l => ListAST( a, l )
+    opt(anchor) ~ ("[" ~> repsep(opt(flowValue), ",") <~ "]") ^^ {
+      case a ~ l => ListAST( a, l map ornull )
     }
 
   lazy val flowValue: PackratParser[ValueAST] =

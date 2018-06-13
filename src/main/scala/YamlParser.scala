@@ -17,14 +17,6 @@ object YamlLexical {
   val INTERPOLATION_LITERAL = '\ue000'
   val INTERPOLATION_VARIABLE = '\ue001'
   val INTERPOLATION_EXPRESSION = '\ue002'
-
-  val FLOAT_REGEX = """([-+]?(?:\d+)?\.\d+(?:[Ee][-+]?\d+)?|[-+]?\d+\.\d+[Ee][-+]?\d+|[-+]?\.inf|\.NaN)"""r
-  val DEC_REGEX = """([-+]?(?:0|[123456789]\d*))"""r
-  val HEX_REGEX = """([-+]?0[xX](?:\d|[abcdefABCDEF])+)"""r
-  val OCT_REGEX = """([-+]?0[oO][01234567]+)"""r
-  val DATE_REGEX = """(\d+-\d\d-\d\d)"""r
-  val TIMESTAMP_REGEX = """(\d+-\d\d-\d\d[Tt]\d\d:\d\d:\d\d(?:\.\d+)?(?:Z|[+-]\d\d:\d\d))"""r
-  val TIME_REGEX = """([012]\d:[012345]\d:[012345]\d(?:\.\d+)?)"""r
 }
 
 class YamlLexical extends IndentationLexical(false, true, List("{", "["), List("}", "]"), "#", "/*", "*/") {
@@ -42,13 +34,7 @@ class YamlLexical extends IndentationLexical(false, true, List("{", "["), List("
       | '/' ~ '*' ~ failure("unclosed comment")
   )
 
-  case class DecLit( chars: String ) extends Token
-  case class HexLit( chars: String ) extends Token
-  case class OctLit( chars: String ) extends Token
-  case class DateLit( chars: String ) extends Token
-  case class TimestampLit( chars: String ) extends Token
-  case class TimeLit( chars: String ) extends Token
-  case class BooleanLit( chars: String ) extends Token
+  case class TextLit( chars: String ) extends Token
   case class Anchor( chars: String ) extends Token
   case class Alias( chars: String ) extends Token
 
@@ -69,19 +55,7 @@ class YamlLexical extends IndentationLexical(false, true, List("{", "["), List("
       {l => StringLit( escape(l mkString) )} |
     '"' ~> rep(guard(not('"')) ~> (('\\' ~ '"' ^^^ "\\\"") | elem("", ch => true))) <~ '"' ^^
       {l => StringLit( interpolate(l mkString, true) )} |
-    text ^^ { l =>
-      l.mkString.trim match {
-        case FLOAT_REGEX( n ) => NumericLit( n )
-        case DEC_REGEX( n ) => DecLit( n )
-        case HEX_REGEX( n ) => HexLit( n )
-        case OCT_REGEX( n ) => OctLit( n )
-        case DATE_REGEX( d ) => DateLit( d )
-        case TIMESTAMP_REGEX( d ) => TimestampLit( d )
-        case TIME_REGEX( t ) => TimeLit( t )
-        case b@("true"|"false") => BooleanLit( b )
-        case s => StringLit( s )
-      }
-    }
+    text ^^ (l => TextLit( l.mkString.trim ))
 
   private def text: Parser[List[Elem]] =
     guard(
@@ -198,14 +172,20 @@ class YamlLexical extends IndentationLexical(false, true, List("{", "["), List("
     buf.toString
   }
 
-  reserved += (
-    "true", "false"
-  )
-
   delimiters += (
     "{", "[", ",", "]", "}",
     ":", "-", ": ", "- ", "--- ", "---", "..."
   )
+}
+
+object YamlParser {
+  val FLOAT_REGEX = """([-+]?(?:\d+)?\.\d+(?:[Ee][-+]?\d+)?|[-+]?\d+\.\d+[Ee][-+]?\d+|[-+]?\.inf|\.NaN)"""r
+  val DEC_REGEX = """([-+]?(?:0|[123456789]\d*))"""r
+  val HEX_REGEX = """([-+]?0[xX](?:\d|[abcdefABCDEF])+)"""r
+  val OCT_REGEX = """([-+]?0[oO][01234567]+)"""r
+  val DATE_REGEX = """(\d+-\d\d-\d\d)"""r
+  val TIMESTAMP_REGEX = """(\d+-\d\d-\d\d[Tt]\d\d:\d\d:\d\d(?:\.\d+)?(?:Z|[+-]\d\d:\d\d))"""r
+  val TIME_REGEX = """([012]\d:[012345]\d:[012345]\d(?:\.\d+)?)"""r
 }
 
 class YamlParser extends StandardTokenParsers with PackratParsers {
@@ -222,46 +202,10 @@ class YamlParser extends StandardTokenParsers with PackratParsers {
 
   def parse( src: io.Source ): AST = parse( new PagedSeqReader(PagedSeq.fromSource(src)) )
 
-  import lexical.{Newline, Indent, Dedent, DecLit, HexLit, OctLit, DateLit, TimestampLit, TimeLit, BooleanLit, Anchor, Alias}
+  import lexical.{Newline, Indent, Dedent, TextLit, Anchor, Alias}
 
-  lazy val decLit: PackratParser[Number] =
-    elem("dec literal", _.isInstanceOf[DecLit]) ^^ (_.chars.toInt.asInstanceOf[Number])
-
-  lazy val hexLit: PackratParser[Number] =
-    elem("hex literal", _.isInstanceOf[HexLit]) ^^ { n =>
-      val (offset, sign) =
-        n.chars.charAt(0) match {
-          case '-' => (3, -1)
-          case '+' => (3, 1)
-          case _ => (2, 1)
-        }
-
-      (Integer.parseInt( n.chars.substring(offset), 16 )*sign).asInstanceOf[Number]
-    }
-
-  lazy val octLit: PackratParser[Number] =
-    elem("octal literal", _.isInstanceOf[OctLit]) ^^ { n =>
-      val (offset, sign) =
-        n.chars.charAt(0) match {
-          case '-' => (3, -1)
-          case '+' => (3, 1)
-          case _ => (2, 1)
-        }
-
-      (Integer.parseInt( n.chars.substring(offset), 8 )*sign).asInstanceOf[Number]
-    }
-
-  lazy val dateLit: PackratParser[LocalDate] =
-    elem("date literal", _.isInstanceOf[DateLit]) ^^ (d => LocalDate.parse(d.chars))
-
-  lazy val timestampLit: PackratParser[ZonedDateTime] =
-    elem("timestamp literal", _.isInstanceOf[TimestampLit]) ^^ (d => ZonedDateTime.parse(d.chars))
-
-  lazy val timeLit: PackratParser[LocalTime] =
-    elem("time literal", _.isInstanceOf[TimeLit]) ^^ (t => LocalTime.parse(t.chars))
-
-  lazy val booleanLit: PackratParser[Boolean] =
-    elem("boolean literal", _.isInstanceOf[BooleanLit]) ^^ (_.chars == "true")
+  lazy val textLit: PackratParser[String] =
+    elem("text literal", _.isInstanceOf[TextLit]) ^^ (_.chars)
 
   lazy val anchor: PackratParser[String] =
     elem("anchor", _.isInstanceOf[Anchor]) ^^ (_.chars)
@@ -299,8 +243,8 @@ class YamlParser extends StandardTokenParsers with PackratParsers {
     }
 
   lazy val pair: PackratParser[PairAST] =
-    opt(primitive) ~ colon ~ opt(value) ^^ {
-      case k ~ _ ~ v => PairAST( ornull(k), ornull(v) ) }
+    primitive ~ colon ~ opt(value) ^^ {
+      case k ~ _ ~ v => PairAST( k, ornull(v) ) }
 
   lazy val value: PackratParser[ValueAST] =
     primitive | Indent ~> container <~ Dedent | flowContainer
@@ -331,8 +275,8 @@ class YamlParser extends StandardTokenParsers with PackratParsers {
     }
 
   lazy val flowPair: PackratParser[PairAST] =
-    opt(flowValue) ~ colon ~ opt(flowValue) ^^ {
-      case k ~ _ ~ v => PairAST( ornull(k), ornull(v) )
+    flowValue ~ colon ~ opt(flowValue) ^^ {
+      case k ~ _ ~ v => PairAST( k, ornull(v) )
     }
 
   lazy val flowList: PackratParser[ContainerAST] =
@@ -343,20 +287,41 @@ class YamlParser extends StandardTokenParsers with PackratParsers {
   lazy val flowValue: PackratParser[ValueAST] =
     primitive | flowContainer
 
+  import YamlParser._
+
   lazy val primitive: PackratParser[PrimitiveAST] =
-    opt(anchor) ~ booleanLit ^^ { case a  ~ b => BooleanAST( a, b ) } |
     opt(anchor) ~ stringLit ^^ { case a ~ s => StringAST( a, s ) } |
-    opt(anchor) ~ decLit ^^ { case a ~ n => NumberAST( a, n ) } |
-    opt(anchor) ~ hexLit ^^ { case a ~ n => NumberAST( a, n ) } |
-    opt(anchor) ~ octLit ^^ { case a ~ n => NumberAST( a, n ) } |
-    opt(anchor) ~ numericLit ^^ {
+    opt(anchor) ~ textLit ^^ {
+      case a ~ ("null"|"~") => NullAST( a )
+      case a ~ "true" => BooleanAST( a, true )
+      case a ~ "false" => BooleanAST( a, false )
       case a ~ (".inf"|"+.inf") => NumberAST( a, Double.PositiveInfinity )
       case a ~ "-.inf" => NumberAST( a, Double.NegativeInfinity )
       case a ~ ".NaN" => NumberAST( a, Double.NaN )
-      case a ~ n => NumberAST( a, n.toDouble ) } |
-    opt(anchor) ~ dateLit ^^ { case a ~ d => DateAST( a, d ) } |
-    opt(anchor) ~ timestampLit ^^ { case a ~ t => TimestampAST( a, t ) } |
-    opt(anchor) ~ timeLit ^^ { case a ~ t => TimeAST( a, t ) } |
+      case a ~ FLOAT_REGEX( n ) => NumberAST( a, n.toDouble )
+      case a ~ DEC_REGEX( n ) => NumberAST( a, n.toInt )
+      case a ~ OCT_REGEX( n ) =>
+        val (offset, sign) =
+          n.charAt(0) match {
+            case '-' => (3, -1)
+            case '+' => (3, 1)
+            case _ => (2, 1)
+          }
+
+        NumberAST( a, Integer.parseInt( n.substring(offset), 8 )*sign )
+      case a ~ HEX_REGEX( n ) =>
+        val (offset, sign) =
+          n.charAt(0) match {
+            case '-' => (3, -1)
+            case '+' => (3, 1)
+            case _ => (2, 1)
+          }
+
+        NumberAST( a, Integer.parseInt( n.substring(offset), 16 )*sign )
+      case a ~ DATE_REGEX( d ) => DateAST( a, LocalDate.parse(d) )
+      case a ~ TIME_REGEX( t ) => TimeAST( a, LocalTime.parse(t) )
+      case a ~ TIMESTAMP_REGEX( t ) => TimestampAST( a, ZonedDateTime.parse(t) )
+      case a ~ s => StringAST( a, s ) } |
     pos ~ alias ^^ {
       case p ~ a => AliasAST( p, a ) }
 

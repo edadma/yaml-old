@@ -213,7 +213,7 @@ class SpecPreviewTests extends FreeSpec with PropertyChecks with Matchers {
         |booleans: [ true, false ]
         |string: '012345'
       """.stripMargin
-    ).head shouldBe Map( "null" -> null, "booleans" -> List(true, false), "string" -> "012345" )
+    ).head shouldBe Map( (null, null), "booleans" -> List(true, false), "string" -> "012345" )
   }
 
 }

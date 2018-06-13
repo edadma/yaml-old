@@ -48,6 +48,7 @@ class YamlLexical extends IndentationLexical(false, true, List("{", "["), List("
   case class DateLit( chars: String ) extends Token
   case class TimestampLit( chars: String ) extends Token
   case class TimeLit( chars: String ) extends Token
+  case class BooleanLit( chars: String ) extends Token
   case class Anchor( chars: String ) extends Token
   case class Alias( chars: String ) extends Token
 
@@ -77,6 +78,7 @@ class YamlLexical extends IndentationLexical(false, true, List("{", "["), List("
         case DATE_REGEX( d ) => DateLit( d )
         case TIMESTAMP_REGEX( d ) => TimestampLit( d )
         case TIME_REGEX( t ) => TimeLit( t )
+        case b@("true"|"false") => BooleanLit( b )
         case s => StringLit( s )
       }
     }
@@ -220,7 +222,7 @@ class YamlParser extends StandardTokenParsers with PackratParsers {
 
   def parse( src: io.Source ): AST = parse( new PagedSeqReader(PagedSeq.fromSource(src)) )
 
-  import lexical.{Newline, Indent, Dedent, DecLit, HexLit, OctLit, DateLit, TimestampLit, TimeLit, Anchor, Alias}
+  import lexical.{Newline, Indent, Dedent, DecLit, HexLit, OctLit, DateLit, TimestampLit, TimeLit, BooleanLit, Anchor, Alias}
 
   lazy val decLit: PackratParser[Number] =
     elem("dec literal", _.isInstanceOf[DecLit]) ^^ (_.chars.toInt.asInstanceOf[Number])
@@ -257,6 +259,9 @@ class YamlParser extends StandardTokenParsers with PackratParsers {
 
   lazy val timeLit: PackratParser[LocalTime] =
     elem("time literal", _.isInstanceOf[TimeLit]) ^^ (t => LocalTime.parse(t.chars))
+
+  lazy val booleanLit: PackratParser[Boolean] =
+    elem("boolean literal", _.isInstanceOf[BooleanLit]) ^^ (_.chars == "true")
 
   lazy val anchor: PackratParser[String] =
     elem("anchor", _.isInstanceOf[Anchor]) ^^ (_.chars)
@@ -339,8 +344,7 @@ class YamlParser extends StandardTokenParsers with PackratParsers {
     primitive | flowContainer
 
   lazy val primitive: PackratParser[PrimitiveAST] =
-    opt(anchor) <~ "true" ^^ { a => BooleanAST( a, true ) } |
-    opt(anchor) <~ "false" ^^ { a => BooleanAST( a, false ) } |
+    opt(anchor) ~ booleanLit ^^ { case a  ~ b => BooleanAST( a, b ) } |
     opt(anchor) ~ stringLit ^^ { case a ~ s => StringAST( a, s ) } |
     opt(anchor) ~ decLit ^^ { case a ~ n => NumberAST( a, n ) } |
     opt(anchor) ~ hexLit ^^ { case a ~ n => NumberAST( a, n ) } |

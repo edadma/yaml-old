@@ -6,8 +6,8 @@ import org.scalatest._
 import prop.PropertyChecks
 
 
-// http://yaml.org/spec/1.0/
-class Spec1Tests extends FreeSpec with PropertyChecks with Matchers {
+// http://yaml.org/spec/1.2/spec.html
+class SpecPreviewTests extends FreeSpec with PropertyChecks with Matchers {
 
 	"Sequence of scalars" in {
     read(
@@ -204,6 +204,16 @@ class Spec1Tests extends FreeSpec with PropertyChecks with Matchers {
     ).head.asInstanceOf[Map[_, _]] map {
       case (k, v) => (k, if (v.asInstanceOf[Double].toString == "NaN") "NaN" else v)
     } shouldBe Map( "canonical" -> 1.23015e+3, "exponential" -> 12.3015e+02, "fixed" -> 1230.15, "negative infinity" -> Double.NegativeInfinity, "not a number" -> "NaN" )
+  }
+
+  "Miscellaneous" in {
+    read(
+      """
+        |null:
+        |booleans: [ true, false ]
+        |string: '012345'
+      """.stripMargin
+    ).head shouldBe Map( "null" -> null, "booleans" -> List(true, false), "string" -> "012345" )
   }
 
 }

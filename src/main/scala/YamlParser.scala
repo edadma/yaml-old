@@ -18,7 +18,7 @@ object YamlLexical {
   val INTERPOLATION_VARIABLE = '\ue001'
   val INTERPOLATION_EXPRESSION = '\ue002'
 
-  val FLOAT_REGEX = """([-+]?(?:\d+)?\.\d+(?:[Ee][-+]?\d+)?|[-+]?\d+\.\d+[Ee][-+]?\d+)"""r
+  val FLOAT_REGEX = """([-+]?(?:\d+)?\.\d+(?:[Ee][-+]?\d+)?|[-+]?\d+\.\d+[Ee][-+]?\d|+[-+]?\.inf|\.NaN)"""r
   val DEC_REGEX = """([-+]?(?:0|[123456789]\d*))"""r
   val HEX_REGEX = """([-+]?0[xX](?:\d|[abcdefABCDEF])+)"""r
   val OCT_REGEX = """([-+]?0[oO][01234567]+)"""r
@@ -343,7 +343,11 @@ class YamlParser extends StandardTokenParsers with PackratParsers {
     opt(anchor) ~ decLit ^^ { case a ~ n => NumberAST( a, n ) } |
     opt(anchor) ~ hexLit ^^ { case a ~ n => NumberAST( a, n ) } |
     opt(anchor) ~ octLit ^^ { case a ~ n => NumberAST( a, n ) } |
-    opt(anchor) ~ numericLit ^^ { case a ~ n => NumberAST( a, n.toDouble ) } |
+    opt(anchor) ~ numericLit ^^ {
+      case a ~ (".inf"|"+.inf") => NumberAST( a, Double.PositiveInfinity )
+      case a ~ "-.inf" => NumberAST( a, Double.NegativeInfinity )
+      case a ~ ".NaN" => NumberAST( a, Double.NaN )
+      case a ~ n => NumberAST( a, n.toDouble ) } |
     opt(anchor) ~ dateLit ^^ { case a ~ d => DateAST( a, d ) } |
     opt(anchor) ~ timestampLit ^^ { case a ~ t => TimestampAST( a, t ) } |
     opt(anchor) ~ timeLit ^^ { case a ~ t => TimeAST( a, t ) } |

@@ -192,4 +192,16 @@ class Spec1Tests extends FreeSpec with PropertyChecks with Matchers {
     ).head shouldBe Map( "canonical" -> 12345, "decimal" -> 12345, "octal" -> 12, "hexadecimal" -> 12 )
   }
 
+  "Floating Point" in {
+    read(
+      """
+        |canonical: 1.23015e+3
+        |exponential: 12.3015e+02
+        |fixed: 1230.15
+        |negative infinity: -.inf
+        |not a number: .NaN
+      """.stripMargin
+    ).head shouldBe Map( "canonical" -> 1.23015e+3, "exponential" -> 12.3015e+02, "fixed" -> 1230.15, "negative infinity" -> Double.NegativeInfinity, "not a number" -> Double.NaN )
+  }
+
 }

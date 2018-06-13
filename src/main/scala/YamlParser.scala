@@ -234,7 +234,8 @@ class YamlParser extends StandardTokenParsers with PackratParsers {
     container | flowValue
 
   lazy val container: PackratParser[ContainerAST] =
-    map | list
+    pairs ^^ (p => MapAST( None, p )) |
+    listValues ^^ (l => ListAST( None, l ))
 
   lazy val colon: PackratParser[_] =
     ": " | (":" ~ guard(Indent | Newline))
@@ -242,20 +243,29 @@ class YamlParser extends StandardTokenParsers with PackratParsers {
   lazy val dash: PackratParser[_] =
     "- " | ("-" ~ guard(Indent | Newline))
 
-  lazy val map: PackratParser[ContainerAST] =
-    opt(anchor) ~ rep1(pair <~ nl) ^^ {
-      case a ~ m => MapAST( a, m )
-    }
+  lazy val pairs: PackratParser[List[PairAST]] =
+    rep1(pair <~ nl)
 
   lazy val pair: PackratParser[PairAST] =
     primitive ~ colon ~ opt(value) ^^ {
       case k ~ _ ~ v => PairAST( k, ornull(v) ) }
 
+  lazy val map: PackratParser[MapAST] =
+    opt(anchor) ~ (Indent ~> pairs <~ Dedent) ^^ {
+      case a ~ p => MapAST( a, p )
+    }
+
+  lazy val list: PackratParser[ListAST] =
+    opt(anchor) ~ (Indent ~> listValues <~ Dedent) ^^ {
+      case a ~ p => ListAST( a, p )
+    }
+
   lazy val value: PackratParser[ValueAST] =
-    primitive | Indent ~> container <~ Dedent | flowContainer | multiline
+    primitive | map | list | flowContainer | multiline
 
   lazy val multiline: PackratParser[ValueAST] =
-    "|" ~> (Indent ~> rep1(textLit <~ nl) <~ Dedent) ^^ (l => StringAST(l.head))
+    opt(anchor) ~ ("|" ~> Indent ~> rep1(textLit <~ nl) <~ Dedent) ^^ {
+      case a ~ l => StringAST( a, l mkString " " ) }
 
   def ornull( a: Option[ValueAST] ) =
     a match {
@@ -263,14 +273,12 @@ class YamlParser extends StandardTokenParsers with PackratParsers {
       case Some( v ) => v
     }
 
-  lazy val list: PackratParser[ContainerAST] =
-    opt(anchor) ~ rep1(dash ~> opt(listValue) <~ nl) ^^ {
-      case a ~ l => ListAST( a, l map ornull )
-    }
+  lazy val listValues: PackratParser[List[ValueAST]] =
+    rep1(dash ~> opt(listValue) <~ nl) ^^ (l => l map ornull)
 
   val listValue: PackratParser[ValueAST] =
-    pair ~ (Indent ~> map <~ Dedent) ^^ {
-      case p ~ MapAST( _, ps ) => MapAST( None, p :: ps ) } |
+    pair ~ (Indent ~> pairs <~ Dedent) ^^ {
+      case p ~ ps => MapAST( None, p :: ps ) } |
     pair ^^ (p => MapAST( None, List(p) )) |
     value
 

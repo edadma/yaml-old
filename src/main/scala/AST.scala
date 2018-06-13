@@ -28,6 +28,6 @@ case class AliasAST( pos: Position, v: String ) extends PrimitiveAST { val ancho
 
 trait ContainerAST extends ValueAST
 case class MapAST( anchor: Option[String], pairs: List[PairAST] ) extends ContainerAST
-case class ListAST( anchor: Option[String], elements: List[AST] ) extends ContainerAST
+case class ListAST( anchor: Option[String], elements: List[ValueAST] ) extends ContainerAST
 
 case class PairAST( key: AST, value: AST ) extends AST

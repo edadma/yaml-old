@@ -21,6 +21,7 @@ object YamlLexical {
   val FLOAT_REGEX = """([-+]?(?:\d+)?\.\d+(?:[Ee][-+]?\d+)?|[-+]?\d+\.\d+[Ee][-+]?\d+)"""r
   val DEC_REGEX = """([-+]?(?:0|[123456789]\d*))"""r
   val HEX_REGEX = """([-+]?0[xX](?:\d|[abcdefABCDEF])+)"""r
+  val OCT_REGEX = """([-+]?0[oO][01234567]+)"""r
   val DATE_REGEX = """(\d+-\d\d-\d\d)"""r
   val TIMESTAMP_REGEX = """(\d+-\d\d-\d\d[Tt]\d\d:\d\d:\d\d(?:\.\d+)?(?:Z|[+-]\d\d:\d\d))"""r
   val TIME_REGEX = """([012]\d:[012345]\d:[012345]\d(?:\.\d+)?)"""r
@@ -43,6 +44,7 @@ class YamlLexical extends IndentationLexical(false, true, List("{", "["), List("
 
   case class DecLit( chars: String ) extends Token
   case class HexLit( chars: String ) extends Token
+  case class OctLit( chars: String ) extends Token
   case class DateLit( chars: String ) extends Token
   case class TimestampLit( chars: String ) extends Token
   case class TimeLit( chars: String ) extends Token
@@ -71,6 +73,7 @@ class YamlLexical extends IndentationLexical(false, true, List("{", "["), List("
         case FLOAT_REGEX( n ) => NumericLit( n )
         case DEC_REGEX( n ) => DecLit( n )
         case HEX_REGEX( n ) => HexLit( n )
+        case OCT_REGEX( n ) => OctLit( n )
         case DATE_REGEX( d ) => DateLit( d )
         case TIMESTAMP_REGEX( d ) => TimestampLit( d )
         case TIME_REGEX( t ) => TimeLit( t )
@@ -217,7 +220,7 @@ class YamlParser extends StandardTokenParsers with PackratParsers {
 
   def parse( src: io.Source ): AST = parse( new PagedSeqReader(PagedSeq.fromSource(src)) )
 
-  import lexical.{Newline, Indent, Dedent, DecLit, HexLit, DateLit, TimestampLit, TimeLit, Anchor, Alias}
+  import lexical.{Newline, Indent, Dedent, DecLit, HexLit, OctLit, DateLit, TimestampLit, TimeLit, Anchor, Alias}
 
   lazy val decLit: PackratParser[Number] =
     elem("dec literal", _.isInstanceOf[DecLit]) ^^ (_.chars.toInt.asInstanceOf[Number])
@@ -232,6 +235,18 @@ class YamlParser extends StandardTokenParsers with PackratParsers {
         }
 
       (Integer.parseInt( n.chars.substring(offset), 16 )*sign).asInstanceOf[Number]
+    }
+
+  lazy val octLit: PackratParser[Number] =
+    elem("octal literal", _.isInstanceOf[OctLit]) ^^ { n =>
+      val (offset, sign) =
+        n.chars.charAt(0) match {
+          case '-' => (3, -1)
+          case '+' => (3, 1)
+          case _ => (2, 1)
+        }
+
+      (Integer.parseInt( n.chars.substring(offset), 8 )*sign).asInstanceOf[Number]
     }
 
   lazy val dateLit: PackratParser[LocalDate] =
@@ -327,6 +342,7 @@ class YamlParser extends StandardTokenParsers with PackratParsers {
     opt(anchor) ~ stringLit ^^ { case a ~ s => StringAST( a, s ) } |
     opt(anchor) ~ decLit ^^ { case a ~ n => NumberAST( a, n ) } |
     opt(anchor) ~ hexLit ^^ { case a ~ n => NumberAST( a, n ) } |
+    opt(anchor) ~ octLit ^^ { case a ~ n => NumberAST( a, n ) } |
     opt(anchor) ~ numericLit ^^ { case a ~ n => NumberAST( a, n.toDouble ) } |
     opt(anchor) ~ dateLit ^^ { case a ~ d => DateAST( a, d ) } |
     opt(anchor) ~ timestampLit ^^ { case a ~ t => TimestampAST( a, t ) } |

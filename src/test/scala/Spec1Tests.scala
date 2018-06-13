@@ -171,7 +171,25 @@ class Spec1Tests extends FreeSpec with PropertyChecks with Matchers {
         |quoted: ' # Not a ''comment''.'
         |tie-fighter: '|\-*-/|'
       """.stripMargin
+    ).head shouldBe Map(
+      "unicode" -> "Sosa did fine.\u263A",
+      "control" -> "\b1998\t1999\t2000\n",
+      "hex esc" -> "\u000d\u000a is \r\n",
+      "single" -> "\"Howdy!\" he cried.",
+      "quoted" -> " # Not a 'comment'.",
+      "tie-fighter" -> "|\\-*-/|"
     )
+  }
+
+  "Integers" in {
+    read(
+      """
+        |canonical: 12345
+        |decimal: +12345
+        |octal: 0o14
+        |hexadecimal: 0xC
+      """.stripMargin
+    ).head shouldBe Map( "canonical" -> 12345, "decimal" -> 12345, "octal" -> 12, "hexadecimal" -> 12 )
   }
 
 }

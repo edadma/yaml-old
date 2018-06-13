@@ -62,6 +62,7 @@ class YamlLexical extends IndentationLexical(false, true, List("{", "["), List("
     guard(
       not(
         elem('{') |
+          '|' |
           '[' |
           '-' ~ '-' ~ '-' |
           '.' ~ '.' ~ '.' |
@@ -174,7 +175,7 @@ class YamlLexical extends IndentationLexical(false, true, List("{", "["), List("
   }
 
   delimiters += (
-    "{", "[", ",", "]", "}",
+    "{", "[", ",", "]", "}", "|",
     ":", "-", ": ", "- ", "--- ", "---", "..."
   )
 }
@@ -251,7 +252,10 @@ class YamlParser extends StandardTokenParsers with PackratParsers {
       case k ~ _ ~ v => PairAST( k, ornull(v) ) }
 
   lazy val value: PackratParser[ValueAST] =
-    primitive | Indent ~> container <~ Dedent | flowContainer
+    primitive | Indent ~> container <~ Dedent | flowContainer | multiline
+
+  lazy val multiline: PackratParser[ValueAST] =
+    "|" ~> (Indent ~> rep1(textLit <~ nl) <~ Dedent) ^^ (l => StringAST(l.head))
 
   def ornull( a: Option[ValueAST] ) =
     a match {

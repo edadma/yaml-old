@@ -60,7 +60,9 @@ class YamlLexical extends IndentationLexical(false, true, List("{", "["), List("
 //      {l => StringLit( l mkString )} |
 //    ('"' ~ '"' ~ '"') ~> rep(guard(not('"' ~ '"' ~ '"')) ~> elem("", ch => true)) <~ ('"' ~ '"' ~ '"') ^^
 //      {l => StringLit( interpolate(l mkString, false) )} |
-    '\'' ~> rep(guard(not('\'')) ~> (('\\' ~ '\'' ^^^ "\\'") | elem("", ch => true))) <~ '\'' ^^
+    '\'' ~> rep(
+      ('\'' ~ '\'' ^^^ "''") |
+        (guard(not('\'')) ~> (('\\' ~ '\'' ^^^ "\\'") | elem("", ch => true)))) <~ '\'' ^^
       {l => StringLit( escape(l mkString) )} |
     '"' ~> rep(guard(not('"')) ~> (('\\' ~ '"' ^^^ "\\\"") | elem("", ch => true))) <~ '"' ^^
       {l => StringLit( interpolate(l mkString, true) )} |
@@ -126,26 +128,26 @@ class YamlLexical extends IndentationLexical(false, true, List("{", "["), List("
             buf append Integer.valueOf( new String(Array(nextc, nextc)), 16 ).toChar
             chr( u )
           } else {
-            buf.append(
-              r.rest.first match {
-                case '\\' => '\\'
-                case '\'' => '\''
-                case '"' => '"'
-                case '$' => '$'
-                case '/' => '/'
-                case 'b' => '\b'
-                case 'f' => '\f'
-                case 'n' => '\n'
-                case 'r' => '\r'
-                case 't' => '\t'
-                case _ => sys.error( "illegal escape character " + r.rest.first )
-              } )
+            r.rest.first match {
+              case '\\' => buf += '\\'
+              case '\'' => buf += '\''
+              case '"' => buf += '"'
+              case '$' => buf += '$'
+              case '/' => buf += '/'
+              case 'b' => buf += '\b'
+              case 'f' => buf += '\f'
+              case 'n' => buf += '\n'
+              case 'r' => buf += '\r'
+              case 't' => buf += '\t'
+              case c => buf ++= s"\\$c"
+            }
 
             chr( r.rest.rest )
           }
-        } else if (r.first == '\'' && !r.rest.atEnd && r.rest.first == '\'')
+        } else if (r.first == '\'' && !r.rest.atEnd && r.rest.first == '\'') {
           buf append '\''
-        else {
+          chr( r.rest.rest )
+        } else {
           buf append r.first
           chr( r.rest )
         }

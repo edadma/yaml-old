@@ -333,67 +333,67 @@ class SpecPreviewTests extends FreeSpec with PropertyChecks with Matchers {
       )
   }
 
-//  "Example 2.28. Log File" in {
-//    read(
-//      """
-//        |---
-//        |Time: 2001-11-23 15:01:42 -5
-//        |User: ed
-//        |Warning:
-//        |  This is an error message
-//        |  for the log file
-//        |---
-//        |Time: 2001-11-23 15:02:31 -5
-//        |User: ed
-//        |Warning:
-//        |  A slightly different error
-//        |  message.
-//        |---
-//        |Date: 2001-11-23 15:03:17 -5
-//        |User: ed
-//        |Fatal:
-//        |  Unknown variable "bar"
-//        |Stack:
-//        |  - file: TopClass.py
-//        |    line: 23
-//        |    code: |
-//        |      x = MoreObject("345\n")
-//        |  - file: MoreClass.py
-//        |    line: 58
-//        |    code: |-
-//        |      foo = bar
-//      """.stripMargin
-//    ) shouldBe
-//      List(
-//        Map(
-//          "Time" -> ZonedDateTime.parse( "2001-11-23T15:01:42-05:00" ),
-//          "User" -> "ed",
-//          "Warning" -> "This is an error message for the log file"
-//        ),
-//        Map(
-//          "Time" -> ZonedDateTime.parse( "2001-11-23T15:01:31-05:00" ),
-//          "User" -> "ed",
-//          "Warning" -> "A slightly different error message."
-//        ),
-//        Map(
-//          "Date" -> ZonedDateTime.parse( "2001-11-23T15:03:17-05:00" ),
-//          "User" -> "ed",
-//          "Fatal" -> "Unknown variable \"bar\"",
-//          "Stack" ->
-//            List(
-//              Map(
-//                "file" -> "TopClass.py",
-//                "line" -> 23,
-//                "code" -> "x = MoreObject(\"345\\n\")\n"
-//              ),
-//              Map(
-//                "file" -> "MoreClass.py",
-//                "line" -> 58,
-//                "code" -> "foo = bar"
-//              )
-//            )
-//        )
-//      )
-//  }
+  "Example 2.28. Log File" in {
+    read(
+      """
+        |---
+        |Time: 2001-11-23 15:01:42 -5
+        |User: ed
+        |Warning:
+        |  This is an error message
+        |  for the log file
+        |---
+        |Time: 2001-11-23 15:02:31 -5
+        |User: ed
+        |Warning:
+        |  A slightly different error
+        |  message.
+        |---
+        |Date: 2001-11-23 15:03:17 -5
+        |User: ed
+        |Fatal:
+        |  Unknown variable "bar"
+        |Stack:
+        |  - file: TopClass.py
+        |    line: 23
+        |    code: |
+        |      x = MoreObject("345\n")
+        |  - file: MoreClass.py
+        |    line: 58
+        |    code: |-
+        |      foo = bar
+      """.stripMargin
+    ) shouldBe
+      List(
+        Map(
+          "Time" -> ZonedDateTime.parse( "2001-11-23T15:01:42-05:00" ),
+          "User" -> "ed",
+          "Warning" -> "This is an error message for the log file"
+        ),
+        Map(
+          "Time" -> ZonedDateTime.parse( "2001-11-23T15:02:31-05:00" ),
+          "User" -> "ed",
+          "Warning" -> "A slightly different error message."
+        ),
+        Map(
+          "Date" -> ZonedDateTime.parse( "2001-11-23T15:03:17-05:00" ),
+          "User" -> "ed",
+          "Fatal" -> "Unknown variable \"bar\"",
+          "Stack" ->
+            List(
+              Map(
+                "file" -> "TopClass.py",
+                "line" -> 23,
+                "code" -> "x = MoreObject(\"345\\n\")\n"
+              ),
+              Map(
+                "file" -> "MoreClass.py",
+                "line" -> 58,
+                "code" -> "foo = bar"
+              )
+            )
+        )
+      )
+  }
 
 }

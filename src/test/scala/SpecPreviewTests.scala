@@ -260,6 +260,23 @@ class SpecPreviewTests extends FreeSpec with PropertyChecks with Matchers {
     ).head shouldBe Map( (null, null), "booleans" -> List(true, false), "string" -> "012345" )
   }
 
+  "Example 2.22. Timestamps" in {
+    read(
+      """
+        |canonical: 2001-12-15T02:59:43.1Z
+        |iso8601: 2001-12-14t21:59:43.10-05:00
+        |spaced: 2001-12-14 21:59:43.10 -5
+        |date: 2002-12-14
+      """.stripMargin
+    ).head shouldBe
+      Map(
+        "canonical" -> ZonedDateTime.parse( "2001-12-15T02:59:43.1Z" ),
+        "iso8601" -> ZonedDateTime.parse( "2001-12-14t21:59:43.10-05:00" ),
+        "spaced" -> ZonedDateTime.parse( "2001-12-14T21:59:43.10-05:00" ),
+        "date" -> LocalDate.parse( "2002-12-14" )
+        )
+  }
+
   "Invoice" in {
     val bill_to =
       Map(

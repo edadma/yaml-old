@@ -13,11 +13,11 @@ Yaml
 Examples
 --------
 
-Here are some code snippets showing how to use the parser.
+Here are some example code snippets showing how to use the parser.
 
 ### Short Example
 
-This example is [example 2.10](http://yaml.org/spec/1.2/spec.html#id2760658) from chapter 2 of the spec.
+This is [example 2.10](http://yaml.org/spec/1.2/spec.html#id2760658) from chapter 2 of the spec.
 
 ```scala
 import xyz.hyperreal.yaml._

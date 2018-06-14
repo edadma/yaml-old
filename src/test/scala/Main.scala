@@ -8,7 +8,14 @@ object Main extends App {
     val tree =
       new YamlParser().parse(
         """
-          |2001-11-23 15:01:42.10 Z
+          |---
+          |hr:
+          |  - Mark McGwire
+          |  # Following node labeled SS
+          |  - &SS Sammy Sosa
+          |rbi:
+          |  - *SS # Subsequent occurrence
+          |  - Ken Griffey
         """.stripMargin
       )
 

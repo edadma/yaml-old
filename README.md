@@ -13,35 +13,39 @@ Yaml
 Examples
 --------
 
-Here are examples of output produced by the YAML parser.
+Here are some code snippets showing how to use the parser.
 
-### Example 1
+### Short Example
 
-This example comes from chapter 2 of the spec: [Example 2.10](http://yaml.org/spec/1.2/spec.html#id2760658).
-
-#### Input
-
-```yaml
----
-hr:
-  - Mark McGwire
-  # Following node labeled SS
-  - &SS Sammy Sosa
-rbi:
-  - *SS # Subsequent occurrence
-  - Ken Griffey
-```
-
-#### Output (pretty printed)
+This example is [example 2.10](http://yaml.org/spec/1.2/spec.html#id2760658) from chapter 2 of the spec.
 
 ```scala
-List(
-    Map(
-        "hr" -> List("Mark McGwire", "Sammy Sosa"),
-        "rbi" -> List("Sammy Sosa", "Ken Griffey")
+import xyz.hyperreal.yaml._
+
+object Example extends App {
+
+  val result =
+    read(
+      """
+        |---
+        |hr:
+        |  - Mark McGwire
+        |  # Following node labeled SS
+        |  - &SS Sammy Sosa
+        |rbi:
+        |  - *SS # Subsequent occurrence
+        |  - Ken Griffey
+      """.stripMargin
     )
-)
+
+  println( result )
+
+}
 ```
+
+#### Output
+
+    List(Map(hr -> List(Mark McGwire, Sammy Sosa), rbi -> List(Sammy Sosa, Ken Griffey)))
 
 Usage
 -----

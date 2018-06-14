@@ -168,7 +168,41 @@ class SpecPreviewTests extends FreeSpec with PropertyChecks with Matchers {
         |  \//||\/||
         |  // ||  ||__
       """.stripMargin
-    )
+    ).head shouldBe
+      """
+        |\//||\/||
+        |// ||  ||__
+      """.trim.stripMargin
+  }
+
+  "In the folded scalars, newlines become spaces" in {
+    read(
+      """
+        |--- >
+        |  Mark McGwire's
+        |  year was crippled
+        |  by a knee injury.
+      """.stripMargin
+    ).head shouldBe "Mark McGwire's year was crippled by a knee injury."
+  }
+
+  "Indentation determines scope" in {
+    read(
+      """
+        |name: Mark McGwire
+        |accomplishment: >
+        |  Mark set a major league
+        |  home run record in 1998.
+        |stats: |
+        |  65 Home Runs
+        |  0.278 Batting Average
+      """.stripMargin
+    ).head shouldBe
+      Map(
+        "name" -> "Mark McGwire",
+        "accomplishment" -> "Mark set a major league home run record in 1998.",
+        "stats" -> "65 Home Runs\n0.278 Batting Average"
+      )
   }
 
   "Quoted Scalars" in {

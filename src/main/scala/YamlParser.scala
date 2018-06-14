@@ -176,7 +176,7 @@ class YamlLexical extends IndentationLexical(false, true, List("{", "["), List("
   }
 
   delimiters += (
-    "{", "[", ",", "]", "}", "|",
+    "{", "[", ",", "]", "}", "|", ">",
     ":", "-", ": ", "- ", "--- ", "---", "..."
   )
 }
@@ -232,7 +232,7 @@ class YamlParser extends StandardTokenParsers with PackratParsers {
     onl ~> rep1(opt(dashes) ~> onl ~> document <~ opt("...") <~ onl) ^^ SourceAST
 
   lazy val document: PackratParser[ValueAST] =
-    container | flowValue
+    container | flowValue | multiline
 
   lazy val container: PackratParser[ContainerAST] =
     pairs ^^ (p => MapAST( None, p )) |

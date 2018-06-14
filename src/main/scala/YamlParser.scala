@@ -183,8 +183,8 @@ class YamlLexical extends IndentationLexical(false, true, List("{", "["), List("
 object YamlParser {
   val FLOAT_REGEX = """([-+]?(?:\d+)?\.\d+(?:[Ee][-+]?\d+)?|[-+]?\d+\.\d+[Ee][-+]?\d+|[-+]?\.inf|\.NaN)"""r
   val DEC_REGEX = """([-+]?(?:0|[123456789]\d*))"""r
-  val HEX_REGEX = """([-+]?0[xX](?:\d|[abcdefABCDEF])+)"""r
-  val OCT_REGEX = """([-+]?0[oO][01234567]+)"""r
+  val HEX_REGEX = """([-+]?0x(?:\d|[abcdefABCDEF])+)"""r
+  val OCT_REGEX = """([-+]?0o[01234567]+)"""r
   val DATE_REGEX = """(\d+-\d\d-\d\d)"""r
   val TIMESTAMP_REGEX = """(\d+-\d\d-\d\d[Tt]\d\d:\d\d:\d\d(?:\.\d*)?(?:Z|[+-]\d\d:\d\d))"""r
   val TIME_REGEX = """([012]\d:[012345]\d:[012345]\d(?:\.\d+)?)"""r
@@ -313,12 +313,12 @@ class YamlParser extends StandardTokenParsers with PackratParsers {
   lazy val primitive: PackratParser[PrimitiveAST] =
     opt(anchor) ~ stringLit ^^ { case a ~ s => StringAST( a, s ) } |
     opt(anchor) ~ textLit ^^ {
-      case a ~ ("null"|"~") => NullAST( a )
-      case a ~ ("yes"|"Yes"|"YES"|"on"|"On"|"ON"|"true"|"True"|"TRUE") => BooleanAST( a, true )
-      case a ~ ("no"|"No"|"NO"|"off"|"Off"|"OFF"|"false"|"False"|"FALSE") => BooleanAST( a, false )
-      case a ~ (".inf"|"+.inf") => NumberAST( a, Double.PositiveInfinity )
-      case a ~ "-.inf" => NumberAST( a, Double.NegativeInfinity )
-      case a ~ ".NaN" => NumberAST( a, Double.NaN )
+      case a ~ ("null"|"NULL"|"Null"|"~") => NullAST( a )
+      case a ~ ("true"|"True"|"TRUE") => BooleanAST( a, true )
+      case a ~ ("false"|"False"|"FALSE") => BooleanAST( a, false )
+      case a ~ (".inf"|"+.inf"|".Inf"|"+.Inf"|".INF"|"+.INF") => NumberAST( a, Double.PositiveInfinity )
+      case a ~ ("-.inf"|"-.Inf"|"-.INF") => NumberAST( a, Double.NegativeInfinity )
+      case a ~ (".NaN"|".nan"|".NAN") => NumberAST( a, Double.NaN )
       case a ~ FLOAT_REGEX( n ) => NumberAST( a, n.toDouble )
       case a ~ DEC_REGEX( n ) => NumberAST( a, n.toInt )
       case a ~ OCT_REGEX( n ) =>

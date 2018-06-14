@@ -60,7 +60,7 @@ libraryDependencies ++= Seq(
   "xyz.hyperreal" %% "indentation-lexical" % "0.8.3"
 )
 
-coverageExcludedPackages := ".*Main"
+coverageExcludedPackages := ".*Main;.*yaml"
 
 mainClass in (Compile, run) := Some( "xyz.hyperreal." + name.value.replace('-', '_') + ".Main" )
 

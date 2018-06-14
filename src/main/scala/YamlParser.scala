@@ -66,8 +66,7 @@ class YamlLexical extends IndentationLexical(false, true, List("{", "["), List("
           '>' |
           '[' |
           '-' ~ '-' ~ '-' |
-          '.' ~ '.' ~ '.' |
-          (elem('&') | '*') ~ elem("letterordigit", _.isLetterOrDigit)
+          '.' ~ '.' ~ '.'
       )) ~> rep1(guard(not(elem(']') | '}' | ',' ~ ' ' | ',' ~ '\n' | ':' ~ ' ' | ':' ~ '\n' | ':' ~ '#' | '-' ~ ' ' | '-' ~ '\n' | '-' ~ '#' | '\n')) ~> elem("", ch => true))
 
   private def escape( s: String) = {

@@ -160,6 +160,17 @@ class SpecPreviewTests extends FreeSpec with PropertyChecks with Matchers {
     ).head shouldBe List( Map("item" -> "Super Hoop", "quantity" -> 1), Map("item" -> "Basketball", "quantity" -> 4), Map("item" -> "Big Shoes", "quantity" -> 1) )
   }
 
+  "In literals, newlines are preserved" in {
+    read(
+      """
+        |# ASCII Art
+        |--- |
+        |  \//||\/||
+        |  // ||  ||__
+      """.stripMargin
+    )
+  }
+
   "Quoted Scalars" in {
     read(
       """

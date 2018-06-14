@@ -33,12 +33,11 @@ class Tests extends FreeSpec with PropertyChecks with Matchers {
         |- 123asdf
         |- 123 asdf
         |- -123.4
-        |- -0x123
         |- -123
         |- -123asdf
         |- -123 asdf
       """.stripMargin
-    ).head shouldBe List( 123.4, 0x123, 123, "123asdf", "123 asdf", -123.4, -0x123, -123, "-123asdf", "-123 asdf" )
+    ).head shouldBe List( 123.4, 0x123, 123, "123asdf", "123 asdf", -123.4, -123, "-123asdf", "-123 asdf" )
   }
 
 }

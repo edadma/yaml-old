@@ -1,6 +1,6 @@
 package xyz.hyperreal.yaml
 
-import java.time.{LocalDate, LocalTime}
+import java.time.{LocalDate, LocalTime, ZonedDateTime}
 
 import org.scalatest._
 import prop.PropertyChecks
@@ -169,10 +169,9 @@ class SpecPreviewTests extends FreeSpec with PropertyChecks with Matchers {
         |  // ||  ||__
       """.stripMargin
     ).head shouldBe
-      """
-        |\//||\/||
-        |// ||  ||__
-      """.trim.stripMargin
+      """|\//||\/||
+         |// ||  ||__
+         |""".stripMargin
   }
 
   "In the folded scalars, newlines become spaces" in {
@@ -183,7 +182,7 @@ class SpecPreviewTests extends FreeSpec with PropertyChecks with Matchers {
         |  year was crippled
         |  by a knee injury.
       """.stripMargin
-    ).head shouldBe "Mark McGwire's year was crippled by a knee injury."
+    ).head shouldBe "Mark McGwire's year was crippled by a knee injury.\n"
   }
 
   "Indentation determines scope" in {
@@ -200,8 +199,8 @@ class SpecPreviewTests extends FreeSpec with PropertyChecks with Matchers {
     ).head shouldBe
       Map(
         "name" -> "Mark McGwire",
-        "accomplishment" -> "Mark set a major league home run record in 1998.",
-        "stats" -> "65 Home Runs\n0.278 Batting Average"
+        "accomplishment" -> "Mark set a major league home run record in 1998.\n",
+        "stats" -> "65 Home Runs\n0.278 Batting Average\n"
       )
   }
 
@@ -268,7 +267,7 @@ class SpecPreviewTests extends FreeSpec with PropertyChecks with Matchers {
         "family" -> "Dumars",
         "address" ->
           Map(
-            "lines" -> "458 Walkman Dr.\nSuite #292",
+            "lines" -> "458 Walkman Dr.\nSuite #292\n",
             "city" -> "Royal Oak",
             "state" -> "MI",
             "postal" -> 48046
@@ -364,7 +363,37 @@ class SpecPreviewTests extends FreeSpec with PropertyChecks with Matchers {
 //        |    code: |-
 //        |      foo = bar
 //      """.stripMargin
-//    )
+//    ) shouldBe
+//      List(
+//        Map(
+//          "Time" -> ZonedDateTime.parse( "2001-11-23T15:01:42-05:00" ),
+//          "User" -> "ed",
+//          "Warning" -> "This is an error message for the log file"
+//        ),
+//        Map(
+//          "Time" -> ZonedDateTime.parse( "2001-11-23T15:01:31-05:00" ),
+//          "User" -> "ed",
+//          "Warning" -> "A slightly different error message."
+//        ),
+//        Map(
+//          "Date" -> ZonedDateTime.parse( "2001-11-23T15:03:17-05:00" ),
+//          "User" -> "ed",
+//          "Fatal" -> "Unknown variable \"bar\"",
+//          "Stack" ->
+//            List(
+//              Map(
+//                "file" -> "TopClass.py",
+//                "line" -> 23,
+//                "code" -> "x = MoreObject(\"345\\n\")\n"
+//              ),
+//              Map(
+//                "file" -> "MoreClass.py",
+//                "line" -> 58,
+//                "code" -> "foo = bar"
+//              )
+//            )
+//        )
+//      )
 //  }
 
 }

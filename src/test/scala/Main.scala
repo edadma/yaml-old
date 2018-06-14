@@ -8,10 +8,7 @@ object Main extends App {
     val tree =
       new YamlParser().parse(
         """
-          |# ASCII Art
-          |--- |
-          |  \//||\/||
-          |  // ||  ||__
+          |2001-11-23 15:01:42.10 Z
         """.stripMargin
       )
 

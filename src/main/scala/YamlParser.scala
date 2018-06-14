@@ -2,7 +2,7 @@
 package xyz.hyperreal.yaml
 
 import java.time.format.DateTimeFormatter
-import java.time.{LocalDate, LocalTime, ZonedDateTime}
+import java.time._
 
 import util.parsing.input._
 import util.parsing.combinator.PackratParsers
@@ -176,7 +176,7 @@ class YamlLexical extends IndentationLexical(false, true, List("{", "["), List("
   }
 
   delimiters += (
-    "{", "[", ",", "]", "}", "|", ">",
+    "{", "[", ",", "]", "}", "|", ">", "|-", ">-",
     ":", "-", ": ", "- ", "--- ", "---", "..."
   )
 }
@@ -189,9 +189,10 @@ object YamlParser {
   val DATE_REGEX = """(\d+-\d\d-\d\d)"""r
   val TIMESTAMP_REGEX = """(\d+-\d\d-\d\d[Tt]\d\d:\d\d:\d\d(?:\.\d*)?(?:Z|[+-]\d\d:\d\d))"""r
   val TIME_REGEX = """([012]\d:[012345]\d:[012345]\d(?:\.\d+)?)"""r
-  val SPACED_TIMESTAMP_REGEX = """(\d+-\d\d-\d\d\s+\d\d:\d\d:\d\d(?:\.\d*)?\s+(?:Z|[+-]\d\d:\d\d|[+-]\d+))"""r
-
-  val SPACED_FORMATTER = DateTimeFormatter.ofPattern( "yyyy-MM-dd HH:mm:ss[.SS] x" )
+  val SPACED_DATETIME_REGEX = """(\d+-\d\d-\d\d\s+\d\d:\d\d:\d\d(?:\.\d*)?)"""r
+  val SPACED_TIMESTAMP_REGEX = """(\d+-\d\d-\d\d\s+\d\d:\d\d:\d\d(?:\.\d*)?)\s+(Z|[+-]\d(?:\d(?::?\d\d(?::?\d\d)?)?)?)"""r
+  val INT_REGEX = """([+-]\d+)"""r
+  val SPACED_FORMATTER = DateTimeFormatter.ofPattern( "yyyy-MM-dd HH:mm:ss[.SS]" )
 }
 
 class YamlParser extends StandardTokenParsers with PackratParsers {
@@ -265,10 +266,12 @@ class YamlParser extends StandardTokenParsers with PackratParsers {
     primitive | map | list | flowContainer | multiline
 
   lazy val multiline: PackratParser[ValueAST] =
-    opt(anchor) ~ ("|" ~> Indent ~> rep1(textLit <~ nl) <~ Dedent) ^^ {
-      case a ~ l => StringAST( a, l mkString "\n" ) } |
-    opt(anchor) ~ (opt(">") ~> Indent ~> rep1(textLit <~ nl) <~ Dedent) ^^ {
-      case a ~ l => StringAST( a, l mkString " " ) }
+    opt(anchor) ~ ("|"|"|-") ~ (Indent ~> rep1(textLit <~ nl) <~ Dedent) ^^ {
+      case a ~ "|" ~ l => StringAST( a, l mkString ("", "\n", "\n") )
+      case a ~ _ ~ l => StringAST( a, l mkString "\n" ) } |
+    opt(anchor) ~ opt(">"|">-") ~ (Indent ~> rep1(textLit <~ nl) <~ Dedent) ^^ {
+      case a ~ Some( ">" ) ~ l => StringAST( a, l mkString ("", " ", "\n") )
+      case a ~ _ ~ l => StringAST( a, l mkString " " ) }
 
   def ornull( a: Option[ValueAST] ) =
     a match {
@@ -312,8 +315,8 @@ class YamlParser extends StandardTokenParsers with PackratParsers {
     opt(anchor) ~ stringLit ^^ { case a ~ s => StringAST( a, s ) } |
     opt(anchor) ~ textLit ^^ {
       case a ~ ("null"|"~") => NullAST( a )
-      case a ~ "true" => BooleanAST( a, true )
-      case a ~ "false" => BooleanAST( a, false )
+      case a ~ ("yes"|"Yes"|"YES"|"on"|"On"|"ON"|"true"|"True"|"TRUE") => BooleanAST( a, true )
+      case a ~ ("no"|"No"|"NO"|"off"|"Off"|"OFF"|"false"|"False"|"FALSE") => BooleanAST( a, false )
       case a ~ (".inf"|"+.inf") => NumberAST( a, Double.PositiveInfinity )
       case a ~ "-.inf" => NumberAST( a, Double.NegativeInfinity )
       case a ~ ".NaN" => NumberAST( a, Double.NaN )
@@ -340,7 +343,14 @@ class YamlParser extends StandardTokenParsers with PackratParsers {
       case a ~ DATE_REGEX( d ) => DateAST( a, LocalDate.parse(d) )
       case a ~ TIME_REGEX( t ) => TimeAST( a, LocalTime.parse(t) )
       case a ~ TIMESTAMP_REGEX( t ) => TimestampAST( a, ZonedDateTime.parse(t) )
-      case a ~ SPACED_TIMESTAMP_REGEX( t ) => TimestampAST( a, ZonedDateTime.parse(t, SPACED_FORMATTER) )//todo: spaced datetimes will have to be built manually (currently, time zone has to be zero padded)
+//      case a ~ SPACED_TIMESTAMP_REGEX( d, INT_REGEX(tz) ) =>
+//        val date = LocalDateTime.parse( d, SPACED_FORMATTER )
+//
+//        TimestampAST( a, date.atOffset(ZoneOffset.ofHours(tz.toInt)).toZonedDateTime )
+      case a ~ SPACED_TIMESTAMP_REGEX( d, tz ) =>
+        val date = LocalDateTime.parse( d, SPACED_FORMATTER )
+
+        TimestampAST( a, date.atOffset(ZoneOffset.of(tz)).toZonedDateTime )
       case a ~ s => StringAST( a, s ) } |
     pos ~ alias ^^ {
       case p ~ a => AliasAST( p, a ) }

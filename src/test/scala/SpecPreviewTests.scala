@@ -130,7 +130,7 @@ class SpecPreviewTests extends FreeSpec with PropertyChecks with Matchers {
     ).head shouldBe Map( "hr" -> List("Mark McGwire", "Sammy Sosa"), "rbi" -> List("Sammy Sosa", "Ken Griffey") )
   }
 
-  """Node for “Sammy Sosa” appears twice in this document""" in {
+  """Example 2.10.  Node for “Sammy Sosa” appears twice in this document""" in {
     read(
       """
         |---

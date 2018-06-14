@@ -183,8 +183,8 @@ class YamlLexical extends IndentationLexical(false, true, List("{", "["), List("
 object YamlParser {
   val FLOAT_REGEX = """([-+]?(?:\d+)?\.\d+(?:[Ee][-+]?\d+)?|[-+]?\d+\.\d+[Ee][-+]?\d+|[-+]?\.inf|\.NaN)"""r
   val DEC_REGEX = """([-+]?(?:0|[123456789]\d*))"""r
-  val HEX_REGEX = """([-+]?0x(?:\d|[abcdefABCDEF])+)"""r
-  val OCT_REGEX = """([-+]?0o[01234567]+)"""r
+  val HEX_REGEX = """(0x(?:\d|[abcdefABCDEF])+)"""r
+  val OCT_REGEX = """(0o[01234567]+)"""r
   val DATE_REGEX = """(\d+-\d\d-\d\d)"""r
   val TIMESTAMP_REGEX = """(\d+-\d\d-\d\d[Tt]\d\d:\d\d:\d\d(?:\.\d*)?(?:Z|[+-]\d\d:\d\d))"""r
   val TIME_REGEX = """([012]\d:[012345]\d:[012345]\d(?:\.\d+)?)"""r

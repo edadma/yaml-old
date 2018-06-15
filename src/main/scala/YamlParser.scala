@@ -65,6 +65,7 @@ class YamlLexical extends IndentationLexical(false, true, List("{", "["), List("
           '|' |
           '>' |
           '[' |
+          '?'|
           '-' ~ '-' ~ '-' |
           '.' ~ '.' ~ '.'
       )) ~> rep1(guard(not(elem(']') | '}' | ',' ~ ' ' | ',' ~ '\n' | ':' ~ ' ' | ':' ~ '\n' | ':' ~ '#' | '-' ~ ' ' | '-' ~ '\n' | '-' ~ '#' | '\n')) ~> elem("", ch => true))
@@ -176,7 +177,7 @@ class YamlLexical extends IndentationLexical(false, true, List("{", "["), List("
 
   delimiters += (
     "{", "[", ",", "]", "}", "|", ">", "|-", ">-",
-    ":", "-", ": ", "- ", "--- ", "---", "..."
+    ":", "-", ": ", "- ", "? ", "?", "--- ", "---", "..."
   )
 }
 
@@ -232,24 +233,38 @@ class YamlParser extends StandardTokenParsers with PackratParsers {
     onl ~> rep1(opt(dashes) ~> onl ~> document <~ opt("...") <~ onl) ^^ SourceAST
 
   lazy val document: PackratParser[ValueAST] =
-    container | flowValue | multiline
-
-  lazy val container: PackratParser[ContainerAST] =
     pairs ^^ (p => MapAST( None, p )) |
-    listValues ^^ (l => ListAST( None, l ))
+    listValues ^^ (l => ListAST( None, l )) |
+    flowValue |
+    multiline
 
   lazy val colon: PackratParser[_] =
-    ": " | (":" ~ guard(Indent | Newline))
+    ": " | ":" //~ guard(Indent | Newline))
 
   lazy val dash: PackratParser[_] =
-    "- " | ("-" ~ guard(Indent | Newline))
+    "- " | "-" //~ guard(Indent | Newline))
 
-  lazy val pairs: PackratParser[List[PairAST]] =
+  lazy val question: PackratParser[_] =
+    "? " | "?" //~ guard(Indent | Newline))
+
+  lazy val pairs: PackratParser[List[(ValueAST, ValueAST)]] =
     rep1(pair <~ nl)
 
-  lazy val pair: PackratParser[PairAST] =
-    primitive ~ colon ~ opt(value) ^^ {
-      case k ~ _ ~ v => PairAST( k, ornull(v) ) }
+  lazy val pair: PackratParser[(ValueAST, ValueAST)] =
+    key ~ colon ~ opt(value) ^^ {
+      case k ~ _ ~ v => (k, ornull(v)) }
+
+  lazy val key: PackratParser[ValueAST] =
+    primitive |
+    question ~> dash ~> opt(listValue) ~ opt(Indent ~> listValues <~ Dedent) <~ nl ^^ {
+      case v ~ None => ListAST( None, List(ornull(v)) )
+      case v ~ Some( vs ) => ListAST( None, ornull(v) :: vs )
+    } |
+    question ~> flowContainer <~ nl |
+    question ~> container <~ nl
+
+  lazy val container: PackratParser[ContainerAST] =
+    map | list
 
   lazy val map: PackratParser[MapAST] =
     opt(anchor) ~ (Indent ~> pairs <~ Dedent) ^^ {
@@ -261,8 +276,17 @@ class YamlParser extends StandardTokenParsers with PackratParsers {
       case a ~ p => ListAST( a, p )
     }
 
+  lazy val listValues: PackratParser[List[ValueAST]] =
+    rep1(dash ~> opt(listValue) <~ nl) ^^ (l => l map ornull)
+
+  val listValue: PackratParser[ValueAST] =
+    pair ~ (Indent ~> pairs <~ Dedent) ^^ {
+      case p ~ ps => MapAST( None, p :: ps ) } |
+    pair ^^ (p => MapAST( None, List(p) )) |
+    value
+
   lazy val value: PackratParser[ValueAST] =
-    primitive | map | list | flowContainer | multiline
+    primitive | container | flowContainer | multiline
 
   lazy val multiline: PackratParser[ValueAST] =
     opt(anchor) ~ ("|"|"|-") ~ (Indent ~> rep1(textLit <~ nl) <~ Dedent) ^^ {
@@ -278,15 +302,6 @@ class YamlParser extends StandardTokenParsers with PackratParsers {
       case Some( v ) => v
     }
 
-  lazy val listValues: PackratParser[List[ValueAST]] =
-    rep1(dash ~> opt(listValue) <~ nl) ^^ (l => l map ornull)
-
-  val listValue: PackratParser[ValueAST] =
-    pair ~ (Indent ~> pairs <~ Dedent) ^^ {
-      case p ~ ps => MapAST( None, p :: ps ) } |
-    pair ^^ (p => MapAST( None, List(p) )) |
-    value
-
   lazy val flowContainer: PackratParser[ContainerAST] =
     flowMap | flowList
 
@@ -295,9 +310,9 @@ class YamlParser extends StandardTokenParsers with PackratParsers {
       case a ~ l => MapAST( a, l )
     }
 
-  lazy val flowPair: PackratParser[PairAST] =
+  lazy val flowPair: PackratParser[(ValueAST, ValueAST)] =
     flowValue ~ colon ~ opt(flowValue) ^^ {
-      case k ~ _ ~ v => PairAST( k, ornull(v) )
+      case k ~ _ ~ v => (k, ornull(v))
     }
 
   lazy val flowList: PackratParser[ContainerAST] =
@@ -332,8 +347,7 @@ class YamlParser extends StandardTokenParsers with PackratParsers {
         NumberAST( a, Integer.parseInt( n.substring(offset), 8 )*sign )
       case a ~ HEX_REGEX( n ) =>
         val (offset, sign) =
-          n.charAt(0) match {
-            case '-' => (3, -1)
+          n.charAt(0) match {case '-' => (3, -1)
             case '+' => (3, 1)
             case _ => (2, 1)
           }

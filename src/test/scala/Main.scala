@@ -8,14 +8,15 @@ object Main extends App {
     val tree =
       new YamlParser().parse(
         """
-          |---
-          |hr:
-          |  - Mark McGwire
-          |  # Following node labeled SS
-          |  - &SS Sammy Sosa
-          |rbi:
-          |  - *SS # Subsequent occurrence
-          |  - Ken Griffey
+          |? - Detroit Tigers
+          |  - Chicago cubs
+          |:
+          |  - 2001-07-23
+          |
+          |? [ New York Yankees,
+          |    Atlanta Braves ]
+          |: [ 2001-07-02, 2001-08-12,
+          |    2001-08-14 ]
         """.stripMargin
       )
 

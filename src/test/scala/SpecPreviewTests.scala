@@ -145,7 +145,29 @@ class SpecPreviewTests extends FreeSpec with PropertyChecks with Matchers {
     ).head shouldBe Map( "hr" -> List("Mark McGwire", "Sammy Sosa"), "rbi" -> List("Sammy Sosa", "Ken Griffey") )
   }
 
-  "Compact Nested Mapping" in {
+  "Example 2.11. Mapping between Sequences" in {
+    read(
+      """
+        |? - Detroit Tigers
+        |  - Chicago cubs
+        |:
+        |  - 2001-07-23
+        |
+        |? [ New York Yankees,
+        |    Atlanta Braves ]
+        |: [ 2001-07-02, 2001-08-12,
+        |    2001-08-14 ]
+      """.stripMargin
+    ).head shouldBe
+      Map(
+        List("Detroit Tigers", "Chicago cubs") ->
+          List(LocalDate.parse("2001-07-23")),
+        List("New York Yankees", "Atlanta Braves") ->
+          List(LocalDate.parse("2001-07-02"), LocalDate.parse("2001-08-12"),
+            LocalDate.parse("2001-08-14")))
+  }
+
+  "Example 2.12. Compact Nested Mapping" in {
     read(
       """
         |---

@@ -30,7 +30,7 @@ class Evaluator {
 
         p.v
       case MapAST( anchor, pairs ) =>
-        val map = pairs map {case PairAST(k, v) => (eval(k), eval(v))} toMap
+        val map = pairs map {case (k, v) => (eval(k), eval(v))} toMap
 
         if (anchor isDefined)
           anchors(anchor get) = map

@@ -27,7 +27,5 @@ case class TimeAST( anchor: Option[String], v: LocalTime ) extends PrimitiveAST
 case class AliasAST( pos: Position, v: String ) extends PrimitiveAST { val anchor = None }
 
 trait ContainerAST extends ValueAST
-case class MapAST( anchor: Option[String], pairs: List[PairAST] ) extends ContainerAST
+case class MapAST( anchor: Option[String], pairs: List[(ValueAST, ValueAST)] ) extends ContainerAST
 case class ListAST( anchor: Option[String], elements: List[ValueAST] ) extends ContainerAST
-
-case class PairAST( key: AST, value: AST ) extends AST

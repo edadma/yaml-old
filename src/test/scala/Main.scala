@@ -7,17 +7,13 @@ object Main extends App {
   try {
     val tree =
       new YamlParser().parse(
-        """
-          |? - Detroit Tigers
-          |  - Chicago cubs
-          |:
-          |  - 2001-07-23
-          |
-          |? [ New York Yankees,
-          |    Atlanta Braves ]
-          |: [ 2001-07-02, 2001-08-12,
-          |    2001-08-14 ]
-        """.stripMargin
+      """
+        |canonical: 1.23015e+3
+        |exponential: 12.3015e+02
+        |fixed: 1230.15
+        |negative infinity: -.inf
+        |not a number: .NaN
+      """.stripMargin
       )
 
     println( tree )

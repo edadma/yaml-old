@@ -263,7 +263,7 @@ class SpecPreviewTests extends FreeSpec with PropertyChecks with Matchers {
       """
         |canonical: 1.23015e+3
         |exponential: 12.3015e+02
-        |fixed: 1230.1.15
+        |fixed: 1230.15
         |negative infinity: -.inf
         |not a number: .NaN
       """.stripMargin

@@ -229,7 +229,7 @@ class SpecPreviewTests extends FreeSpec with PropertyChecks with Matchers {
   "Example 2.17. Quoted Scalars" in {
     read(
       """
-        |unicode: "Sosa did fine.\u263A"
+        |unicode: "Sosa did fine.\u005Cu263A"
         |control: "\b1998\t1999\t2000\n"
         |hex esc: "\x0d\x0a is \r\n"
         |

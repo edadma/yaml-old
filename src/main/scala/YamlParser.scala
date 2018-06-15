@@ -12,12 +12,7 @@ import xyz.hyperreal.indentation_lexical._
 
 
 object YamlLexical {
-  val INTERPOLATION_REGEX = """\$(?:([a-zA-Z_]+\d*)|\{([^}]+)\}|\$)"""r
-  val INTERPOLATED_REGEX = """[\ue000-\ue002]([^\ue000-\ue002]+)"""r
-  val INTERPOLATION_DELIMITER = '\ue000'
-  val INTERPOLATION_LITERAL = '\ue000'
-  val INTERPOLATION_VARIABLE = '\ue001'
-  val INTERPOLATION_EXPRESSION = '\ue002'
+  val NEWLINE_REGEX = """[ \t]*\n[ \t]*"""r
 }
 
 class YamlLexical extends IndentationLexical(false, true, List("{", "["), List("}", "]"), "#", "/*", "*/") {
@@ -52,11 +47,15 @@ class YamlLexical extends IndentationLexical(false, true, List("{", "["), List("
 //      {l => StringLit( interpolate(l mkString, false) )} |
     '\'' ~> rep(
       ('\'' ~ '\'' ^^^ "''") |
-        (guard(not('\'')) ~> (('\\' ~ '\'' ^^^ "\\'") | elem("", ch => true)))) <~ '\'' ^^
-      {l => StringLit( escape(l mkString) )} |
+        (guard(not('\'')) ~> elem("", ch => true))) <~ '\'' ^^
+      {l => StringLit( quoteEscape(newlines(l mkString)) )} |
     '"' ~> rep(guard(not('"')) ~> (('\\' ~ '"' ^^^ "\\\"") | elem("", ch => true))) <~ '"' ^^
-      {l => StringLit( interpolate(l mkString, true) )} |
+      {l => StringLit( escape(newlines(l mkString)) )} |
     text ^^ (l => TextLit( l.mkString.trim ))
+
+  private def quoteEscape( s: String ) = s.replace( "''", "'" )
+
+  private def newlines( s: String ) = NEWLINE_REGEX.replaceAllIn( s, " " )
 
   private def text: Parser[List[Elem]] =
     guard(
@@ -68,9 +67,20 @@ class YamlLexical extends IndentationLexical(false, true, List("{", "["), List("
           '?'|
           '-' ~ '-' ~ '-' |
           '.' ~ '.' ~ '.'
-      )) ~> rep1(guard(not(elem(']') | '}' | ',' ~ ' ' | ',' ~ '\n' | ':' ~ ' ' | ':' ~ '\n' | ':' ~ '#' | '-' ~ ' ' | '-' ~ '\n' | '-' ~ '#' | '\n')) ~> elem("", ch => true))
+      )) ~>
+      rep1(guard(not(
+        elem(']') |
+          '}' |
+          ',' ~ ' ' |
+          ',' ~ '\n' |
+          ':' ~ ' ' |
+          ':' ~ '\n' |
+          '-' ~ ' ' |
+          '-' ~ '\n' |
+//          ' ' ~ '#' |
+          '\n')) ~> elem("", ch => true))
 
-  private def escape( s: String) = {
+  private def escape( s: String ) = {
     val buf = new StringBuilder
 
     def chr( r: Reader[Char] ) {
@@ -111,16 +121,21 @@ class YamlLexical extends IndentationLexical(false, true, List("{", "["), List("
             chr( u )
           } else {
             r.rest.first match {
-              case '\\' => buf += '\\'
-              case '\'' => buf += '\''
-              case '"' => buf += '"'
-              case '$' => buf += '$'
-              case '/' => buf += '/'
+              case 'a' => buf += '\u0007'
+              case 'e' => buf += '\u001b'
               case 'b' => buf += '\b'
               case 'f' => buf += '\f'
               case 'n' => buf += '\n'
               case 'r' => buf += '\r'
               case 't' => buf += '\t'
+              case 'v' => buf += '\u000b'
+              case 'N' => buf += '\u0085'
+              case 'L' => buf += '\u2028'
+              case 'P' => buf += '\u2029'
+              case '\\' => buf += '\\'
+              case '_' => buf += '\u00A0'
+              case '"' => buf += '"'
+              case '/' => buf += '/'
               case c => buf ++= s"\\$c"
             }
 
@@ -138,41 +153,6 @@ class YamlLexical extends IndentationLexical(false, true, List("{", "["), List("
 
     chr( new CharSequenceReader(s) )
     buf.toString()
-  }
-
-  private def interpolate( s: String, handleEscape: Boolean ): String = {
-    val buf = new StringBuilder
-    var last = 0
-    var nonliteral = false
-
-    def append( code: Char, s: String ) {
-      buf += code
-      buf append s
-    }
-
-    def literal( s: String ) = append( INTERPOLATION_LITERAL, if (handleEscape) escape(s) else s )
-
-    for (m <- INTERPOLATION_REGEX.findAllMatchIn( s )) {
-      if (m.start > last)
-        literal( s.substring(last, m.start) )
-
-      m.matched.charAt( 1 ) match {
-        case '$' => literal( "$" )
-        case '{' => append(INTERPOLATION_EXPRESSION, m.group(2))
-        case _ => append(INTERPOLATION_VARIABLE, m.group(1))
-      }
-
-      nonliteral = true
-      last = m.end
-    }
-
-    if (last < s.length)
-      literal( s.substring(last) )
-
-    if (!nonliteral)
-      buf.deleteCharAt( 0 )
-
-    buf.toString
   }
 
   delimiters += (

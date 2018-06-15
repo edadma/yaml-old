@@ -5,19 +5,18 @@ package xyz.hyperreal.yaml
 object Main extends App {
 
   try {
+    val u = "\\u263A"
+    val x = "\\x0d\\x0a"
+    val d = "\\-"
     val tree =
       new YamlParser().parse(
-      """
-        |canonical: 1.23015e+3
-        |exponential: 12.3015e+02
-        |fixed: 1230.15
-        |negative infinity: -.inf
-        |not a number: .NaN
-      """.stripMargin
+        """
+          |"\u005Cu263A"
+        """.stripMargin
       )
 
     println( tree )
-    println( new Evaluator().eval(tree) )
+    println( new Evaluator().eval(tree).asInstanceOf[List[String]].head map (_.toInt) )
   } catch {
     case e: Exception => println( e.getMessage )
   }

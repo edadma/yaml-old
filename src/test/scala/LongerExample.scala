@@ -1,48 +1,44 @@
-import xyz.hyperreal.yaml._
-
-
-object LongerExample extends App {
-
-  val result =
-    read(
-      """
-        |---
-        |receipt:     Oz-Ware Purchase Invoice
-        |date:        2012-08-06
-        |customer:
-        |    first_name:   Dorothy
-        |    family_name:  Gale
-        |
-        |items:
-        |    - part_no:   A4786
-        |      descrip:   Water Bucket (Filled)
-        |      price:     1.47
-        |      quantity:  4
-        |
-        |    - part_no:   E1628
-        |      descrip:   High Heeled "Ruby" Slippers
-        |      size:      8
-        |      price:     133.7
-        |      quantity:  1
-        |
-        |bill-to:  &id001
-        |    street: |
-        |            123 Tornado Alley
-        |            Suite 16
-        |    city:   East Centerville
-        |    state:  KS
-        |
-        |ship-to:  *id001
-        |
-        |specialDelivery:  >
-        |    Follow the Yellow Brick
-        |    Road to the Emerald City.
-        |    Pay no attention to the
-        |    man behind the curtain.
-        |...
-      """.stripMargin
-    )
-
-  println( result )
-
-}
+//import xyz.hyperreal.yaml._
+//
+//
+//object LongerExample extends App {
+//
+//  val result =
+//    read(
+//      """
+//        |---
+//        |invoice: 34843
+//        |date   : 2001-01-23
+//        |bill-to: &id001
+//        |    given  : Chris
+//        |    family : Dumars
+//        |    address:
+//        |        lines: |
+//        |            458 Walkman Dr.
+//        |            Suite #292
+//        |        city    : Royal Oak
+//        |        state   : MI
+//        |        postal  : 48046
+//        |ship-to: *id001
+//        |product:
+//        |    - sku         : BL394D
+//        |      quantity    : 4
+//        |      description : Basketball
+//        |      price       : 450.00
+//        |    - sku         : BL4438H
+//        |      quantity    : 1
+//        |      description : Super Hoop
+//        |      price       : 2392.00
+//        |tax  : 251.42
+//        |total: 4443.52
+//        |comments:
+//        |    Late afternoon is best.
+//        |    Backup contact is Nancy
+//        |    Billsmer @ 338-4338.
+//        |...
+//      """.stripMargin
+//    )
+//
+//  println( result )
+//
+//}

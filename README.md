@@ -17,7 +17,7 @@ Here are some example code snippets showing how to use the parser.
 
 ### Short Example
 
-This is [example 2.10](http://yaml.org/spec/1.2/spec.html#id2760658) from chapter 2 of the spec.
+This is from [example 2.10](http://yaml.org/spec/1.2/spec.html#id2760658) from chapter 2 of the spec.
 
 ```scala
 import xyz.hyperreal.yaml._
@@ -46,6 +46,88 @@ object Example extends App {
 #### Output
 
     List(Map(hr -> List(Mark McGwire, Sammy Sosa), rbi -> List(Sammy Sosa, Ken Griffey)))
+
+
+### Longer Example
+
+This is from [example 2.27](http://yaml.org/spec/1.2/spec.html#id2761823) from chapter 2 of the spec.
+
+```yaml
+---
+invoice: 34843
+date   : 2001-01-23
+bill-to: &id001
+    given  : Chris
+    family : Dumars
+    address:
+        lines: |
+            458 Walkman Dr.
+            Suite #292
+        city    : Royal Oak
+        state   : MI
+        postal  : 48046
+ship-to: *id001
+product:
+    - sku         : BL394D
+      quantity    : 4
+      description : Basketball
+      price       : 450.00
+    - sku         : BL4438H
+      quantity    : 1
+      description : Super Hoop
+      price       : 2392.00
+tax  : 251.42
+total: 4443.52
+comments:
+    Late afternoon is best.
+    Backup contact is Nancy
+    Billsmer @ 338-4338.
+...
+```
+
+#### Output
+
+The output from the above example is equivalent the result of the following Scala snippet.
+
+```scala
+val bill_to =
+  Map(
+    "given" -> "Chris",
+    "family" -> "Dumars",
+    "address" ->
+      Map(
+        "lines" -> "458 Walkman Dr.\nSuite #292\n",
+        "city" -> "Royal Oak",
+        "state" -> "MI",
+        "postal" -> 48046
+      )
+  )
+
+  Map(
+    "invoice" -> 34843,
+    "date" -> LocalDate.parse("2001-01-23"),
+    "bill-to" -> bill_to,
+    "ship-to" -> bill_to,
+    "product" ->
+      List(
+        Map(
+          "sku" -> "BL394D",
+          "quantity" -> 4,
+          "description" -> "Basketball",
+          "price" -> 450.00
+        ),
+        Map(
+          "sku" -> "BL4438H",
+          "quantity" -> 1,
+          "description" -> "Super Hoop",
+          "price" -> 2392.00
+        )
+      ),
+    "tax" -> 251.42,
+    "total" -> 4443.52,
+    "comments" -> "Late afternoon is best. Backup contact is Nancy Billsmer @ 338-4338."
+  )
+```
 
 Usage
 -----

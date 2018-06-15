@@ -247,6 +247,19 @@ class SpecPreviewTests extends FreeSpec with PropertyChecks with Matchers {
     )
   }
 
+  "Example 2.18. Multi-line Flow Scalars" in {
+    read(
+      """
+        |plain:
+        |  This unquoted scalar
+        |  spans many lines.
+        |
+        |quoted: "So does this
+        |  quoted scalar.\n"
+      """.stripMargin
+    ).head shouldBe Map( "plain" -> "This unquoted scalar spans many lines.", "quoted" -> "So does this quoted scalar.\n" )
+  }
+
   "Example 2.19. Integers" in {
     read(
       """

@@ -9,7 +9,7 @@ import prop.PropertyChecks
 // http://yaml.org/spec/1.2/spec.html
 class SpecPreviewTests extends FreeSpec with PropertyChecks with Matchers {
 
-	"Sequence of scalars" in {
+	"Example 2.1.  Sequence of Scalars" in {
     read(
       """
         |- Mark McGwire
@@ -19,7 +19,7 @@ class SpecPreviewTests extends FreeSpec with PropertyChecks with Matchers {
     ).head shouldBe List( "Mark McGwire", "Sammy Sosa", "Ken Griffey" )
 	}
 
-  "Mapping of scalars to scalars" in {
+  "Example 2.2.  Mapping of Scalars to Scalars" in {
     read(
       """
         |hr:  65
@@ -29,7 +29,7 @@ class SpecPreviewTests extends FreeSpec with PropertyChecks with Matchers {
     ).head shouldBe Map( "hr" -> 65, "avg" -> 0.278, "rbi" -> 147 )
   }
 
-  "Mapping of scalars to sequences" in {
+  "Example 2.3.  Mapping of Scalars to Sequences" in {
     read(
       """
         |american:
@@ -44,7 +44,7 @@ class SpecPreviewTests extends FreeSpec with PropertyChecks with Matchers {
     ).head shouldBe Map( "american" -> List( "Boston Red Sox", "Detroit Tigers", "New York Yankees" ), "national" -> List( "New York Mets", "Chicago Cubs", "Atlanta Braves" ) )
   }
 
-  "Sequence of mappings" in {
+  "Example 2.4.  Sequence of Mappings" in {
     read(
       """
         |-
@@ -59,7 +59,7 @@ class SpecPreviewTests extends FreeSpec with PropertyChecks with Matchers {
     ).head shouldBe List( Map("name" -> "Mark McGwire", "hr" -> 65, "avg" -> 0.278), Map("name" -> "Sammy Sosa", "hr" -> 63, "avg" -> 0.288) )
   }
 
-  "Sequence of sequences" in {
+  "Example 2.5. Sequence of Sequences" in {
     read(
       """
         |- [name        , hr, avg  ]
@@ -69,7 +69,7 @@ class SpecPreviewTests extends FreeSpec with PropertyChecks with Matchers {
     ).head shouldBe List( List("name", "hr", "avg"), List("Mark McGwire", 65, 0.278), List("Sammy Sosa", 63, 0.288) )
   }
 
-  "Mapping of mappings" in {
+  "Example 2.6. Mapping of Mappings" in {
     read(
       """
         |Mark McGwire: {hr: 65, avg: 0.278}
@@ -81,7 +81,7 @@ class SpecPreviewTests extends FreeSpec with PropertyChecks with Matchers {
     ).head shouldBe Map( "Mark McGwire" -> Map("hr" -> 65, "avg" -> 0.278), "Sammy Sosa" -> Map("hr" -> 63, "avg" -> 0.288) )
   }
 
-  "Two Documents in a Stream" in {
+  "Example 2.7.  Two Documents in a Stream" in {
     read(
       """
         |# Ranking of 1998 home runs
@@ -98,7 +98,7 @@ class SpecPreviewTests extends FreeSpec with PropertyChecks with Matchers {
     ) shouldBe List( List("Mark McGwire", "Sammy Sosa", "Ken Griffey"), List("Chicago Cubs", "St Louis Cardinals") )
   }
 
-  "Play by Play Feed from a Game" in {
+  "Example 2.8.  Play by Play Feed from a Game" in {
     read(
       """
         |---
@@ -115,7 +115,7 @@ class SpecPreviewTests extends FreeSpec with PropertyChecks with Matchers {
     ) shouldBe List( Map("time" -> LocalTime.parse("20:03:20"), "player" -> "Sammy Sosa", "action" -> "strike (miss)"), Map("time" -> LocalTime.parse("20:03:47"), "player" -> "Sammy Sosa", "action" -> "grand slam") )
   }
 
-  "Single Document with Two Comments" in {
+  "Example 2.9.  Single Document with Two Comments" in {
     read(
       """
         |---
@@ -182,7 +182,7 @@ class SpecPreviewTests extends FreeSpec with PropertyChecks with Matchers {
     ).head shouldBe List( Map("item" -> "Super Hoop", "quantity" -> 1), Map("item" -> "Basketball", "quantity" -> 4), Map("item" -> "Big Shoes", "quantity" -> 1) )
   }
 
-  "In literals, newlines are preserved" in {
+  "Example 2.13.  In literals, newlines are preserved" in {
     read(
       """
         |# ASCII Art
@@ -196,7 +196,7 @@ class SpecPreviewTests extends FreeSpec with PropertyChecks with Matchers {
          |""".stripMargin
   }
 
-  "In the folded scalars, newlines become spaces" in {
+  "Example 2.14.  In the folded scalars, newlines become spaces" in {
     read(
       """
         |--- >
@@ -207,7 +207,7 @@ class SpecPreviewTests extends FreeSpec with PropertyChecks with Matchers {
     ).head shouldBe "Mark McGwire's year was crippled by a knee injury.\n"
   }
 
-  "Indentation determines scope" in {
+  "Example 2.16.  Indentation determines scope" in {
     read(
       """
         |name: Mark McGwire
@@ -226,7 +226,7 @@ class SpecPreviewTests extends FreeSpec with PropertyChecks with Matchers {
       )
   }
 
-  "Quoted Scalars" in {
+  "Example 2.17. Quoted Scalars" in {
     read(
       """
         |unicode: "Sosa did fine.\u263A"
@@ -247,7 +247,7 @@ class SpecPreviewTests extends FreeSpec with PropertyChecks with Matchers {
     )
   }
 
-  "Integers" in {
+  "Example 2.19. Integers" in {
     read(
       """
         |canonical: 12345
@@ -258,12 +258,12 @@ class SpecPreviewTests extends FreeSpec with PropertyChecks with Matchers {
     ).head shouldBe Map( "canonical" -> 12345, "decimal" -> 12345, "octal" -> 12, "hexadecimal" -> 12 )
   }
 
-  "Floating Point" in {
+  "Example 2.20. Floating Point" in {
     read(
       """
         |canonical: 1.23015e+3
         |exponential: 12.3015e+02
-        |fixed: 1230.15
+        |fixed: 1230.1.15
         |negative infinity: -.inf
         |not a number: .NaN
       """.stripMargin
@@ -272,7 +272,7 @@ class SpecPreviewTests extends FreeSpec with PropertyChecks with Matchers {
     } shouldBe Map( "canonical" -> 1.23015e+3, "exponential" -> 12.3015e+02, "fixed" -> 1230.15, "negative infinity" -> Double.NegativeInfinity, "not a number" -> "NaN" )
   }
 
-  "Miscellaneous" in {
+  "Example 2.21. Miscellaneous" in {
     read(
       """
         |null:
@@ -299,7 +299,7 @@ class SpecPreviewTests extends FreeSpec with PropertyChecks with Matchers {
         )
   }
 
-  "Invoice" in {
+  "Example 2.27. Invoice" in {
     val bill_to =
       Map(
         "given" -> "Chris",

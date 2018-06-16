@@ -41,10 +41,6 @@ class YamlLexical extends IndentationLexical(false, true, List("{", "["), List("
     '*' ~> rep1(elem("anchor", c => c.isLetterOrDigit)) ^^ (l => Alias( l.mkString ))
 
   private def scalarToken: Parser[Token] =
-//    ('\'' ~ '\'' ~ '\'') ~> rep(guard(not('\'' ~ '\'' ~ '\'')) ~> elem("", ch => true)) <~ ('\'' ~ '\'' ~ '\'') ^^
-//      {l => StringLit( l mkString )} |
-//    ('"' ~ '"' ~ '"') ~> rep(guard(not('"' ~ '"' ~ '"')) ~> elem("", ch => true)) <~ ('"' ~ '"' ~ '"') ^^
-//      {l => StringLit( interpolate(l mkString, false) )} |
     '\'' ~> rep(
       ('\'' ~ '\'' ^^^ "''") |
         (guard(not('\'')) ~> elem("", ch => true))) <~ '\'' ^^
@@ -61,6 +57,7 @@ class YamlLexical extends IndentationLexical(false, true, List("{", "["), List("
     guard(
       not(
         elem('{') |
+          '!' |
           '|' |
           '>' |
           '[' |
@@ -156,7 +153,7 @@ class YamlLexical extends IndentationLexical(false, true, List("{", "["), List("
   }
 
   delimiters += (
-    "{", "[", ",", "]", "}", "|", ">", "|-", ">-",
+    "{", "[", ",", "]", "}", "|", ">", "|-", ">-", "!", "!!",
     ":", "-", ": ", "- ", "? ", "?", "--- ", "---", "..."
   )
 }
@@ -244,8 +241,6 @@ class YamlParser extends StandardTokenParsers with PackratParsers {
       case v ~ Some( vs ) => ListAST( None, ornull(v) :: vs )
     } |
     question ~> value
-//    question ~> flowContainer <~ nl |
-//    question ~> container <~ nl
 
   lazy val container: PackratParser[ContainerAST] =
     map | list
@@ -340,10 +335,6 @@ class YamlParser extends StandardTokenParsers with PackratParsers {
       case a ~ DATE_REGEX( d ) => DateAST( a, LocalDate.parse(d) )
       case a ~ TIME_REGEX( t ) => TimeAST( a, LocalTime.parse(t) )
       case a ~ TIMESTAMP_REGEX( t ) => TimestampAST( a, ZonedDateTime.parse(t) )
-//      case a ~ SPACED_TIMESTAMP_REGEX( d, INT_REGEX(tz) ) =>
-//        val date = LocalDateTime.parse( d, SPACED_FORMATTER )
-//
-//        TimestampAST( a, date.atOffset(ZoneOffset.ofHours(tz.toInt)).toZonedDateTime )
       case a ~ SPACED_TIMESTAMP_REGEX( d, tz ) =>
         val date = LocalDateTime.parse( d, SPACED_FORMATTER )
 

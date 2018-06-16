@@ -222,26 +222,30 @@ class YamlParser extends StandardTokenParsers with PackratParsers {
     ": " | ":" //~ guard(Indent | Newline))
 
   lazy val dash: PackratParser[_] =
-    "- " | "-" //~ guard(Indent | Newline))
+    "- " | "-"
 
   lazy val question: PackratParser[_] =
-    "? " | "?" //~ guard(Indent | Newline))
+    "? " | "?"
 
   lazy val pairs: PackratParser[List[(ValueAST, ValueAST)]] =
     rep1(pair <~ nl)
 
   lazy val pair: PackratParser[(ValueAST, ValueAST)] =
-    key ~ colon ~ opt(value) ^^ {
-      case k ~ _ ~ v => (k, ornull(v)) }
+    primitive ~ colon ~ opt(value) ^^ {
+      case k ~ _ ~ v => (k, ornull(v)) } |
+    complexKey ~ opt(nl ~ colon ~ opt(value)) ^^ {
+      case k ~ (None|Some(_ ~  _ ~ None )) => (k, NullAST)
+      case k ~ Some(_ ~  _ ~ Some(v) ) => (k, v)
+    }
 
-  lazy val key: PackratParser[ValueAST] =
-    primitive |
-    question ~> dash ~> opt(listValue) ~ opt(Indent ~> listValues <~ Dedent) <~ nl ^^ {
+  lazy val complexKey: PackratParser[ValueAST] =
+    question ~> dash ~> opt(listValue) ~ opt(Indent ~> listValues <~ Dedent) ^^ {
       case v ~ None => ListAST( None, List(ornull(v)) )
       case v ~ Some( vs ) => ListAST( None, ornull(v) :: vs )
     } |
-    question ~> flowContainer <~ nl |
-    question ~> container <~ nl
+    question ~> value
+//    question ~> flowContainer <~ nl |
+//    question ~> container <~ nl
 
   lazy val container: PackratParser[ContainerAST] =
     map | list
@@ -278,7 +282,7 @@ class YamlParser extends StandardTokenParsers with PackratParsers {
 
   def ornull( a: Option[ValueAST] ) =
     a match {
-      case None => NullAST( None )
+      case None => NullAST
       case Some( v ) => v
     }
 
@@ -308,7 +312,7 @@ class YamlParser extends StandardTokenParsers with PackratParsers {
   lazy val primitive: PackratParser[PrimitiveAST] =
     opt(anchor) ~ stringLit ^^ { case a ~ s => StringAST( a, s ) } |
     opt(anchor) ~ textLit ^^ {
-      case a ~ ("null"|"NULL"|"Null"|"~") => NullAST( a )
+      case _ ~ ("null"|"NULL"|"Null"|"~") => NullAST
       case a ~ ("true"|"True"|"TRUE") => BooleanAST( a, true )
       case a ~ ("false"|"False"|"FALSE") => BooleanAST( a, false )
       case a ~ (".inf"|"+.inf"|".Inf"|"+.Inf"|".INF"|"+.INF") => NumberAST( a, Double.PositiveInfinity )

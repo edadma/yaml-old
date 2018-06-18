@@ -13,7 +13,7 @@ object Main extends App {
       )
 
     println( tree )
-    println( new Evaluator().eval(tree)/*.asInstanceOf[List[String]].head map (_.toInt)*/ )
+    println( new Evaluator(Nil).eval(tree)/*.asInstanceOf[List[String]].head map (_.toInt)*/ )
   } catch {
     case e: Exception => println( e.getMessage )
   }

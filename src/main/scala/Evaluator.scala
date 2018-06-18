@@ -1,10 +1,12 @@
 package xyz.hyperreal.yaml
 
+import scala.collection.immutable.ListMap
 import scala.collection.mutable
 
 
-class Evaluator {
+class Evaluator( options: Seq[Symbol] ) {
 
+  val listMapOption = options contains 'listMap
   val anchors = new mutable.HashMap[String, Any]
 
   def reset: Unit = {
@@ -30,7 +32,12 @@ class Evaluator {
 
         p.v
       case MapAST( anchor, pairs ) =>
-        val map = pairs map {case (k, v) => (eval(k), eval(v))} toMap
+        val evaled = pairs map {case (k, v) => (eval(k), eval(v))}
+        val map =
+          if (listMapOption)
+            ListMap( evaled: _* )
+          else
+            evaled toMap
 
         if (anchor isDefined)
           anchors(anchor get) = map

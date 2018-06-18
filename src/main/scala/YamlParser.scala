@@ -228,7 +228,7 @@ class YamlParser extends StandardTokenParsers with PackratParsers {
     rep1(pair <~ nl)
 
   lazy val pair: PackratParser[(ValueAST, ValueAST)] =
-    primitive ~ colon ~ opt(value) ^^ {
+    flowValue ~ colon ~ opt(value) ^^ {
       case k ~ _ ~ v => (k, ornull(v)) } |
     complexKey ~ opt(nl ~ colon ~ opt(value)) ^^ {
       case k ~ (None|Some(_ ~  _ ~ None )) => (k, NullAST)

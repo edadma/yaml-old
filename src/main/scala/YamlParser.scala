@@ -290,8 +290,9 @@ class YamlParser extends StandardTokenParsers with PackratParsers {
     }
 
   lazy val flowPair: PackratParser[(ValueAST, ValueAST)] =
-    flowValue ~ colon ~ opt(flowValue) ^^ {
-      case k ~ _ ~ v => (k, ornull(v))
+    flowValue ~ opt(colon ~ opt(flowValue)) ^^ {
+      case k ~ None => (k, NullAST)
+      case k ~ Some( _ ~ v ) => (k, ornull(v))
     }
 
   lazy val flowList: PackratParser[ContainerAST] =

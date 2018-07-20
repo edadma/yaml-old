@@ -207,9 +207,13 @@ class YamlParser extends StandardTokenParsers with PackratParsers {
     "--- " | "---" ~ guard(Newline)
 
   lazy val yaml: PackratParser[AST] =
-    onl ~> rep1(opt(dashes) ~> onl ~> document <~ opt("...") <~ onl) ^^ SourceAST
+    onl ~> (rep1(document) | success(List(NullAST))) <~ onl ^^ SourceAST//(document | success(NullAST))
 
   lazy val document: PackratParser[ValueAST] =
+    dashes ~> onl ~> (documentValue | success(NullAST)) <~ onl <~ opt("...") <~ onl |
+    opt(dashes) ~> onl ~> documentValue <~ onl <~ opt("...") <~ onl
+
+  lazy val documentValue: PackratParser[ValueAST] =
     pairs ^^ (p => MapAST( None, p )) |
     listValues ^^ (l => ListAST( None, l )) |
     flowValue |

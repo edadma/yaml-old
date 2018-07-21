@@ -8,12 +8,12 @@ object Main extends App {
     val tree =
       new YamlParser().parse(
         """
-          |
-        """.stripMargin
+          |a:
+          |  c:""".stripMargin
       )
 
     println( tree )
-    println( new Evaluator(Nil).eval(tree)/*.asInstanceOf[List[String]].head map (_.toInt)*/ )
+    println( new Evaluator(Nil).eval(tree) )
   } catch {
     case e: Exception => println( e.getMessage )
   }

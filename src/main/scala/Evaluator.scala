@@ -6,7 +6,7 @@ import scala.collection.mutable
 
 class Evaluator( options: Seq[Symbol] ) {
 
-  val listMapOption = options contains 'listMap
+  val listMapOption = options contains Symbol("listMap")
   val anchors = new mutable.HashMap[String, Any]
 
   def reset: Unit = {

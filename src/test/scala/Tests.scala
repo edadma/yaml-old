@@ -4,10 +4,10 @@ package xyz.hyperreal.yaml
 import java.time.{LocalDate, LocalTime, ZonedDateTime}
 
 import org.scalatest._
-import prop.PropertyChecks
+import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
 
 
-class Tests extends FreeSpec with PropertyChecks with Matchers {
+class Tests extends FreeSpec with ScalaCheckPropertyChecks with Matchers {
 
   "datetime" in {
     read(

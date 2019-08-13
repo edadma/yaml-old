@@ -13,6 +13,6 @@ package object yaml {
     if (pos eq null)
       sys.error( error )
     else
-      sys.error( pos.line + ": " + error + "\n" + pos.longString )
+      sys.error( s"${pos.line}: $error\n${pos.longString}" )
 
 }

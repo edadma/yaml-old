@@ -3,11 +3,11 @@ package xyz.hyperreal.yaml
 import java.time.{LocalDate, LocalTime, ZonedDateTime}
 
 import org.scalatest._
-import prop.PropertyChecks
+import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
 
 
 // http://yaml.org/spec/1.2/spec.html
-class SpecPreviewTests extends FreeSpec with PropertyChecks with Matchers {
+class SpecPreviewTests extends FreeSpec with ScalaCheckPropertyChecks with Matchers {
 
 	"Example 2.1.  Sequence of Scalars" in {
     read(

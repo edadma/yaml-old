@@ -81,7 +81,7 @@ class YamlLexical extends IndentationLexical(false, true, List("{", "["), List("
   private def escape( s: String ) = {
     val buf = new StringBuilder
 
-    def chr( r: Reader[Char] ) {
+    def chr( r: Reader[Char] ): Unit = {
       if (!r.atEnd) {
         if (r.first == '\\') {
           if (r.rest.atEnd)
@@ -153,7 +153,7 @@ class YamlLexical extends IndentationLexical(false, true, List("{", "["), List("
     buf.toString()
   }
 
-  delimiters += (
+  delimiters ++= List(
     "{", "[", ",", "]", "}", "|", ">", "|-", ">-", "!", "!!",
     ":", "-", ": ", "- ", "? ", "?", "--- ", "---", "..."
   )

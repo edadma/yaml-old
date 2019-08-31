@@ -13,7 +13,7 @@ after_success:
 language: scala
 
 scala:
-  - 2.12.6
+  - 2.13.0
 
 jdk:
-  - oraclejdk8
+  - oraclejdk11

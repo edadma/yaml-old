@@ -3,39 +3,38 @@ package xyz.hyperreal.yaml
 import scala.collection.immutable.ListMap
 import scala.collection.mutable
 
+class Evaluator(options: Seq[String]) {
 
-class Evaluator( options: Seq[Symbol] ) {
+  private val listMapOption = options contains "listMap"
+  private val anchors = new mutable.HashMap[String, Any]
 
-  val listMapOption = options contains Symbol("listMap")
-  val anchors = new mutable.HashMap[String, Any]
-
-  def reset: Unit = {
+  private def reset(): Unit = {
     anchors.clear
   }
 
-  def eval( ast: AST ): Any =
+  def eval(ast: AST): Any =
     ast match {
-      case SourceAST( documents ) =>
+      case SourceAST(documents) =>
         for (d <- documents)
           yield {
-            reset
-            eval( d )
+            reset()
+            eval(d)
           }
-      case AliasAST( pos, name ) =>
+      case AliasAST(pos, name) =>
         anchors get name match {
-          case None => problem( pos, s"anchor not found: $name" )
-          case Some( v ) => v
+          case None    => problem(pos, s"anchor not found: $name")
+          case Some(v) => v
         }
       case p: PrimitiveAST =>
         if (p.anchor isDefined)
           anchors(p.anchor.get) = p.v
 
         p.v
-      case MapAST( anchor, pairs ) =>
-        val evaled = pairs map {case (k, v) => (eval(k), eval(v))}
+      case MapAST(anchor, pairs) =>
+        val evaled = pairs map { case (k, v) => (eval(k), eval(v)) }
         val map =
           if (listMapOption)
-            ListMap( evaled: _* )
+            evaled to ListMap
           else
             evaled toMap
 
@@ -43,7 +42,7 @@ class Evaluator( options: Seq[Symbol] ) {
           anchors(anchor get) = map
 
         map
-      case ListAST( anchor, elements ) =>
+      case ListAST(anchor, elements) =>
         val list = elements map eval
 
         if (anchor isDefined)
